@@ -9,9 +9,13 @@ from models import AircraftPosition, ModeSMessage, SensorMetadata
 class SupabaseService:
     """Lightweight wrapper around Supabase REST APIs used for MLAT storage."""
 
-    def __init__(self) -> None:
+    def __init__(self, use_service_role: bool = False) -> None:
         url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_ANON_KEY")
+        
+        if use_service_role:
+            key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        else:
+            key = os.getenv("SUPABASE_ANON_KEY")
 
         if not url or not key:
             self.client = None
@@ -122,14 +126,18 @@ class SupabaseService:
         response = client.table("sensors").upsert(payload).execute()
         return response.data[0] if response.data else {}
 
-    def get_active_sensors(self, minutes: int = 5) -> List[Dict[str, Any]]:
+    def get_active_sensors(self, minutes: Optional[int] = 5) -> List[Dict[str, Any]]:
         client = self._ensure_client()
-        response = (
-            client.table("sensors")
-            .select("*")
-            .gte("last_heartbeat", f"now() - interval '{minutes} minutes'")
-            .execute()
-        )
+        if minutes is None or minutes > 100000:
+            # Get all sensors without time filter
+            response = client.table("sensors").select("*").execute()
+        else:
+            response = (
+                client.table("sensors")
+                .select("*")
+                .gte("last_heartbeat", f"now() - interval '{minutes} minutes'")
+                .execute()
+            )
         return response.data or []
 
     # ------------------------------------------------------------------

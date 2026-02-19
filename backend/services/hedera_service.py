@@ -55,33 +55,59 @@ class HederaService:
         if operator_id and operator_key and client_ctor:
             try:
                 client = client_ctor()
-                client.set_operator(_account_id_from_string(operator_id), _private_key_from_string(operator_key))
+                # Try both method naming conventions (SDK version compatibility)
+                try:
+                    client.set_operator(_account_id_from_string(operator_id), _private_key_from_string(operator_key))
+                except AttributeError:
+                    client.setOperator(_account_id_from_string(operator_id), _private_key_from_string(operator_key))
                 self.client = client
+                logger.info(f"Hedera client initialized for operator {operator_id}")
             except Exception as exc:
                 logger.warning("Failed to initialize Hedera client, falling back to stub mode: %s", exc)
         else:
             logger.info("Hedera credentials not fully provided – running in stub mode.")
 
     async def log_evaluation(self, evaluation: dict) -> int:
-        topic_id = os.getenv("HCS_TOPIC_ID")
+        topic_id_str = os.getenv("HCS_TOPIC_ID")
         message = str(evaluation)
 
-        if not self.client or not topic_id:
+        if not self.client or not topic_id_str:
             return self._fallback_sequence()
+
+        # Parse topic ID from string
+        from hedera import TopicId
+        topic_id = TopicId.fromString(topic_id_str) if hasattr(TopicId, 'fromString') else TopicId.from_string(topic_id_str)
 
         transaction = TopicMessageSubmitTransaction()
         _call_setter(transaction, "set_topic_id", "setTopicId", topic_id)
         _call_setter(transaction, "set_message", "setMessage", message)
 
-        tx_response = await transaction.execute_async(self.client)
-        receipt = await tx_response.get_receipt_async(self.client)
-        return receipt.topic_sequence_number
+        # Execute synchronously (Java SDK doesn't support Python async)
+        def _execute_sync():
+            try:
+                tx_response = transaction.execute(self.client)
+            except AttributeError:
+                # Try camelCase variant
+                tx_response = transaction.execute(self.client)
+            
+            try:
+                receipt = tx_response.getReceipt(self.client)
+            except AttributeError:
+                receipt = tx_response.get_receipt(self.client)
+            
+            return receipt.topicSequenceNumber if hasattr(receipt, 'topicSequenceNumber') else receipt.topic_sequence_number
+        
+        return await asyncio.to_thread(_execute_sync)
 
     async def mint_skill_token(self, user_id: str, skill_worth: int) -> str:
-        token_id = os.getenv("SWT_TOKEN_ID")
+        token_id_str = os.getenv("SWT_TOKEN_ID")
 
-        if not self.client or not token_id:
+        if not self.client or not token_id_str:
             return self._fallback_token_id()
+
+        # Parse token ID from string
+        from hedera import TokenId
+        token_id = TokenId.fromString(token_id_str) if hasattr(TokenId, 'fromString') else TokenId.from_string(token_id_str)
 
         account_id = _account_id_from_string(user_id)
 
@@ -89,9 +115,22 @@ class HederaService:
         _call_setter(transaction, "set_token_id", "setTokenId", token_id)
         _call_setter(transaction, "set_amount", "setAmount", skill_worth)
 
-        tx_response = await transaction.execute_async(self.client)
-        receipt = await tx_response.get_receipt_async(self.client)
-        return str(receipt.token_id)
+        # Execute synchronously (Java SDK doesn't support Python async)
+        def _execute_sync():
+            try:
+                tx_response = transaction.execute(self.client)
+            except AttributeError:
+                tx_response = transaction.execute(self.client)
+            
+            try:
+                receipt = tx_response.getReceipt(self.client)
+            except AttributeError:
+                receipt = tx_response.get_receipt(self.client)
+            
+            token_id_result = receipt.tokenId if hasattr(receipt, 'tokenId') else receipt.token_id
+            return str(token_id_result)
+        
+        return await asyncio.to_thread(_execute_sync)
 
     async def create_skill_token(self) -> str:
         operator_id = os.getenv("HEDERA_OPERATOR_ID")

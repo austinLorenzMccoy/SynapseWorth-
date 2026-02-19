@@ -7,8 +7,13 @@ import json
 import sys
 from pathlib import Path
 
-from models import SensorLocation, SensorMetadata
-from services.supabase_service import SupabaseService
+from dotenv import load_dotenv
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(BACKEND_ROOT))
+
+from models import SensorLocation, SensorMetadata  # type: ignore
+from services.supabase_service import SupabaseService  # type: ignore
 
 DEFAULT_LOCATION_FILE = Path(__file__).resolve().parents[1] / "location-override.json"
 
@@ -21,12 +26,13 @@ def load_location_file(path: Path) -> list[dict]:
 
 
 def main() -> None:
+    load_dotenv(BACKEND_ROOT / ".env")
     location_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_LOCATION_FILE
     sensors = load_location_file(location_path)
 
-    supabase = SupabaseService()
+    supabase = SupabaseService(use_service_role=True)
     if not supabase.is_configured:
-        print("Supabase credentials missing. Please set SUPABASE_URL and SUPABASE_ANON_KEY.")
+        print("Supabase credentials missing. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.")
         return
 
     inserted = 0

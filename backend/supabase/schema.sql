@@ -1,7 +1,7 @@
--- Enable required extensions (PostGIS for geospatial, TimescaleDB for time-series)
+-- Enable required extensions (PostGIS for geospatial)
+-- Note: TimescaleDB not available on Supabase free tier, using regular tables with indexes
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS postgis_topology;
-CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 -- ============================================================================
 -- Sensors registered on the Neuron network
@@ -36,9 +36,10 @@ CREATE TABLE IF NOT EXISTS mode_s_messages (
     received_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-SELECT create_hypertable('mode_s_messages', 'received_at', if_not_exists => TRUE);
+-- Hypertable conversion skipped (TimescaleDB not available)
 CREATE INDEX IF NOT EXISTS mode_s_messages_icao_idx ON mode_s_messages (icao_address, received_at DESC);
 CREATE INDEX IF NOT EXISTS mode_s_messages_timestamp_idx ON mode_s_messages (timestamp_ns DESC);
+CREATE INDEX IF NOT EXISTS mode_s_messages_received_at_idx ON mode_s_messages (received_at DESC);
 
 -- ============================================================================
 -- MLAT-derived aircraft positions (hypertable for time-series queries)
@@ -57,9 +58,10 @@ CREATE TABLE IF NOT EXISTS aircraft_positions (
     calculated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-SELECT create_hypertable('aircraft_positions', 'calculated_at', if_not_exists => TRUE);
+-- Hypertable conversion skipped (TimescaleDB not available)
 CREATE INDEX IF NOT EXISTS aircraft_positions_icao_idx ON aircraft_positions (icao_address, calculated_at DESC);
 CREATE INDEX IF NOT EXISTS aircraft_positions_confidence_idx ON aircraft_positions (confidence_score DESC);
+CREATE INDEX IF NOT EXISTS aircraft_positions_calculated_at_idx ON aircraft_positions (calculated_at DESC);
 
 -- ============================================================================
 -- Row Level Security (optional multi-tenant controls)
@@ -68,7 +70,20 @@ ALTER TABLE sensors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mode_s_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aircraft_positions ENABLE ROW LEVEL SECURITY;
 
--- By default allow read access; tighten policies once auth is wired up
+-- By default allow read/write access; tighten policies once auth is wired up
+DROP POLICY IF EXISTS "Allow read for all" ON sensors;
+DROP POLICY IF EXISTS "Allow write for all" ON sensors;
+DROP POLICY IF EXISTS "Allow read for all" ON mode_s_messages;
+DROP POLICY IF EXISTS "Allow write for all" ON mode_s_messages;
+DROP POLICY IF EXISTS "Allow read for all" ON aircraft_positions;
+DROP POLICY IF EXISTS "Allow write for all" ON aircraft_positions;
+
 CREATE POLICY "Allow read for all" ON sensors FOR SELECT USING (true);
+CREATE POLICY "Allow write for all" ON sensors FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update for all" ON sensors FOR UPDATE USING (true);
+
 CREATE POLICY "Allow read for all" ON mode_s_messages FOR SELECT USING (true);
+CREATE POLICY "Allow write for all" ON mode_s_messages FOR INSERT WITH CHECK (true);
+
 CREATE POLICY "Allow read for all" ON aircraft_positions FOR SELECT USING (true);
+CREATE POLICY "Allow write for all" ON aircraft_positions FOR INSERT WITH CHECK (true);

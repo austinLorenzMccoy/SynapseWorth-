@@ -73,18 +73,37 @@ class MLATPipelineService:
         )
 
         hedera_sequence = None
+        token_id = None
+        
         if self.hedera.client:
+            # Enhanced Hedera log payload with sensor IDs and metadata
+            sensor_ids = [obs["sensor_id"] for obs in observations]
             log_payload = {
                 "type": "mlat_position",
                 "icao": position.icaoAddress,
                 "latitude": position.latitude,
                 "longitude": position.longitude,
+                "altitude_ft": position.altitudeFt,
                 "confidence": position.confidenceScore,
-                "sensorCount": position.sensorCount,
+                "sensor_count": position.sensorCount,
+                "sensor_ids": sensor_ids,
+                "calculation_method": position.calculationMethod,
                 "timestamp": calculated_at,
             }
             hedera_sequence = await self.hedera.log_evaluation(log_payload)
             position.hederaSequenceNumber = hedera_sequence
+            
+            # Mint Flight Track Token for high-confidence positions
+            if position.confidenceScore >= 90 and position.sensorCount >= 4:
+                try:
+                    token_id = await self.hedera.mint_skill_token(
+                        user_id=os.getenv("HEDERA_OPERATOR_ID", "0.0.0"),
+                        skill_worth=int(position.confidenceScore)
+                    )
+                    position.flightTrackTokenId = token_id
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Failed to mint Flight Track Token: {e}")
 
         if self.supabase.is_configured:
             await asyncio.to_thread(self.supabase.store_aircraft_position, position)
