@@ -1,0 +1,36 @@
+# Dependencies and build artifacts
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# Python
+backend/venv/
+**/__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment files (managed locally only)
+.env
+*.env
+*.env.*
+backend/.env
+backend/buyer-env
+frontend/.env
+backend/.env.local
+frontend/.env.local
+docs/
+
+# Logs & coverage
+*.log
+coverage/
+backend/.coverage
+backend/htmlcov/
+
+# Misc
+.DS_Store
+.idea/
+.vscode/
+
+docs
