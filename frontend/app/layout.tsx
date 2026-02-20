@@ -2,7 +2,6 @@ import React from "react"
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { Web3ModalProvider } from '../lib/wallets/Web3ModalProvider'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({ 
@@ -58,10 +57,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        <Web3ModalProvider>
-          {children}
-          <Analytics />
-        </Web3ModalProvider>
+        {children}
+        <Analytics />
       </body>
     </html>
   )
