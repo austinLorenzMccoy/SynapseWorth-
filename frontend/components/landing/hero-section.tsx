@@ -2,13 +2,10 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Zap, Wallet } from "lucide-react"
+import { ArrowRight, Zap } from "lucide-react"
 import { Logo } from "@/components/brand/logo"
-import { useWalletInterface } from "@/lib/wallets/useWalletInterface"
 
 export function HeroSection() {
-  const { walletInterface, accountId, isConnected } = useWalletInterface()
-
   return (
     <section className="relative min-h-screen flex flex-col overflow-hidden">
       {/* Background with gradient overlay */}
@@ -35,25 +32,12 @@ export function HeroSection() {
         <div className="container mx-auto flex items-center justify-between">
           <Logo size="md" />
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/dashboard/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Marketplace
+            <Link href="/mlat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              MLAT Dashboard
             </Link>
             <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Dashboard
             </Link>
-            {isConnected ? (
-              <Button asChild size="sm" variant="outline">
-                <Link href="/dashboard">
-                  <Wallet className="w-4 h-4 mr-2" />
-                  {accountId?.slice(0, 6)}...{accountId?.slice(-4)}
-                </Link>
-              </Button>
-            ) : (
-              <Button size="sm" onClick={() => walletInterface?.connect()}>
-                <Wallet className="w-4 h-4 mr-2" />
-                Connect Wallet
-              </Button>
-            )}
           </nav>
         </div>
       </header>
