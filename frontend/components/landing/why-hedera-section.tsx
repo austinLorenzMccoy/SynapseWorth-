@@ -1,22 +1,22 @@
 "use client"
 
-import { Zap, Shield, Leaf } from "lucide-react"
+import { Zap, Shield, Network } from "lucide-react"
 
 const features = [
   {
-    title: "Microtransactions",
-    description: "Sub-cent transaction fees enable true knowledge micro-payments and granular economic incentives.",
+    title: "Fast Consensus",
+    description: "Hedera's high throughput and low latency enable real-time logging of aircraft positions as they're calculated.",
     icon: Zap,
   },
   {
-    title: "Immutable Verification",
-    description: "Hedera Consensus Service provides tamper-proof audit trails for every AI decision and action.",
+    title: "Immutable Audit Trail",
+    description: "Every MLAT calculation is permanently logged to HCS, creating verifiable flight track history.",
     icon: Shield,
   },
   {
-    title: "Low-Carbon Ledger",
-    description: "Carbon-negative network ensures sustainable scaling for the future of decentralized intelligence.",
-    icon: Leaf,
+    title: "Decentralized Network",
+    description: "Neuron's distributed sensor network combined with Hedera consensus eliminates single points of failure.",
+    icon: Network,
   },
 ]
 
@@ -27,10 +27,10 @@ export function WhyHederaSection() {
         {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-            Why Hedera
+            Why Hedera for MLAT
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            The trust, coordination, and economic layer for verifiable AI
+            Trustless aircraft tracking with verifiable position data
           </p>
         </div>
 
@@ -63,9 +63,9 @@ export function WhyHederaSection() {
         {/* Bottom tagline */}
         <div className="mt-16 text-center">
           <p className="text-xl md:text-2xl font-semibold text-foreground">
-            <span className="text-muted-foreground">SynapseWorth doesn{"'"}t ask you to trust AI</span>
+            <span className="text-muted-foreground">Built for the Neuron bounty</span>
             {" "}—{" "}
-            <span className="text-primary">it proves it.</span>
+            <span className="text-primary">Decentralized aviation tracking.</span>
           </p>
         </div>
       </div>

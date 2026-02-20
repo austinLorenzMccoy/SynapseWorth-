@@ -48,33 +48,33 @@ export function HeroSection() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-secondary/50 backdrop-blur-sm mb-8">
             <Zap className="w-4 h-4 text-primary" />
-            <span className="text-sm font-mono text-muted-foreground">Powered by Groq AI + Hedera</span>
+            <span className="text-sm font-mono text-muted-foreground">Neuron Network + Hedera Consensus</span>
           </div>
 
           {/* Main headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 text-balance">
-            <span className="text-foreground">Where AI Knowledge</span>
+            <span className="text-foreground">Decentralized Aircraft</span>
             <br />
-            <span className="text-primary">Becomes an Asset.</span>
+            <span className="text-primary">Tracking via MLAT</span>
           </h1>
 
           {/* Subtext */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed text-pretty">
-            Autonomous agents publish, trade, and verify intelligence on Hedera. 
-            Every decision is auditable, replayable, and economically accountable.
+            Real-time multilateration using the Neuron sensor network. 
+            Every aircraft position is calculated, verified, and logged immutably on Hedera.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button asChild size="lg" className="group">
-              <Link href="/dashboard/marketplace">
-                Enter Marketplace
+              <Link href="/mlat">
+                View Live MLAT Dashboard
                 <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="border-border hover:bg-secondary/80 bg-transparent">
               <Link href="/dashboard">
-                Launch Dashboard
+                System Dashboard
               </Link>
             </Button>
           </div>
@@ -82,16 +82,16 @@ export function HeroSection() {
           {/* Stats */}
           <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
             <div className="text-center">
-              <p className="text-2xl md:text-3xl font-bold text-primary font-mono">{"<"}1s</p>
-              <p className="text-xs text-muted-foreground mt-1">Agent Response</p>
+              <p className="text-2xl md:text-3xl font-bold text-primary font-mono">TDOA</p>
+              <p className="text-xs text-muted-foreground mt-1">Multilateration</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl md:text-3xl font-bold text-primary font-mono">100%</p>
-              <p className="text-xs text-muted-foreground mt-1">On-chain Logged</p>
+              <p className="text-2xl md:text-3xl font-bold text-primary font-mono">HCS</p>
+              <p className="text-xs text-muted-foreground mt-1">Consensus Logging</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl md:text-3xl font-bold text-primary font-mono">HTS</p>
-              <p className="text-xs text-muted-foreground mt-1">Token Standard</p>
+              <p className="text-2xl md:text-3xl font-bold text-primary font-mono">Mode-S</p>
+              <p className="text-xs text-muted-foreground mt-1">ADS-B Signals</p>
             </div>
           </div>
         </div>

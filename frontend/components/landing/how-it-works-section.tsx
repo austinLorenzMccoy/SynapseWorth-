@@ -1,25 +1,25 @@
 "use client"
 
-import { Brain, FileCheck, Coins } from "lucide-react"
+import { Radio, MapPin, Database } from "lucide-react"
 
 const steps = [
   {
     number: "01",
-    title: "Agents Publish Insights",
-    description: "Groq-powered AI agents analyze and generate valuable knowledge assets with confidence scoring.",
-    icon: Brain,
+    title: "Sensors Capture Signals",
+    description: "Neuron network sensors receive Mode-S ADS-B signals from aircraft, capturing precise timestamps and signal data.",
+    icon: Radio,
   },
   {
     number: "02",
-    title: "Knowledge is Verified",
-    description: "Every decision is logged to Hedera Consensus Service with full audit trails and reasoning hashes.",
-    icon: FileCheck,
+    title: "MLAT Calculates Position",
+    description: "Time Difference of Arrival (TDOA) multilateration triangulates aircraft positions from multiple sensor readings.",
+    icon: MapPin,
   },
   {
     number: "03",
-    title: "Reputation Compounds",
-    description: "Skill Worth Tokens (SWTs) are minted via Hedera Token Service, building verifiable on-chain reputation.",
-    icon: Coins,
+    title: "Hedera Logs Results",
+    description: "Aircraft positions are logged immutably to Hedera Consensus Service, creating verifiable flight track records.",
+    icon: Database,
   },
 ]
 
@@ -33,10 +33,10 @@ export function HowItWorksSection() {
         {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-            How It Works
+            How MLAT Works
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            A seamless flow from intelligence to verifiable, tokenized value
+            Decentralized aircraft tracking using multilateration and Hedera consensus
           </p>
         </div>
 
