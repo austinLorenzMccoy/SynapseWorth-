@@ -45,6 +45,9 @@ graph LR
 .
 ├── README.md                  # You are here 👋
 ├── backend/                   # FastAPI + Neuron + MLAT + Hedera + Supabase
+│   ├── mlat-core/             # 📦 SDK-ready MLAT calculation module
+│   ├── hedera-logger/         # 📦 SDK-ready Hedera HCS/HTS integration
+│   ├── neuron-client/         # 📦 SDK-ready Neuron sensor client
 │   ├── services/              # Neuron buyer, MLAT solver, Supabase, Hedera
 │   ├── routers/               # MLAT API endpoints
 │   ├── scripts/               # Sensor seeding, replay CLI, Hedera setup
@@ -58,6 +61,103 @@ graph LR
 └── SUPABASE_SETUP.md          # Database schema setup instructions
 ```
 Refer to each subfolder README for deep dives.
+
+## 📦 SDK-Ready Architecture
+
+AircraftWorth is built with a **modular, SDK-ready architecture** that separates core functionality into reusable components. Each module can be used independently or composed together for custom MLAT applications.
+
+### Core Modules
+
+#### 1. **mlat-core** - MLAT Calculation Engine
+Pure TDOA multilateration logic with no external dependencies.
+
+```python
+from mlat_core import MLATCalculator, SensorReading
+
+calculator = MLATCalculator(min_sensors=4)
+result = calculator.calculate_position(
+    icao_address="ABC123",
+    sensor_readings=[...]
+)
+```
+
+**Features**: TDOA calculation, confidence scoring, GDOP estimation, time window filtering  
+**Documentation**: [`backend/mlat-core/README.md`](backend/mlat-core/README.md)
+
+#### 2. **hedera-logger** - Hedera Integration
+Clean interface for HCS logging and HTS token minting.
+
+```python
+from hedera_logger import HederaLogger
+
+logger = HederaLogger(operator_id="0.0.123", operator_key="...")
+result = await logger.log_position(
+    topic_id="0.0.7968510",
+    position_data={...}
+)
+```
+
+**Features**: HCS topic submission, HTS NFT minting, batch operations, async support  
+**Documentation**: [`backend/hedera-logger/README.md`](backend/hedera-logger/README.md)
+
+#### 3. **neuron-client** - Neuron Network Interface
+Sensor data ingestion and Mode-S message streaming.
+
+```python
+from neuron_client import NeuronClient
+
+client = NeuronClient(
+    buyer_account_id="0.0.6324974",
+    sensor_ids=["sensor1", "sensor2"]
+)
+
+async for message in client.stream_messages():
+    print(f"Aircraft: {message.icao_address}")
+```
+
+**Features**: Real-time streaming, batch fetching, sensor health monitoring, ICAO filtering  
+**Documentation**: [`backend/neuron-client/README.md`](backend/neuron-client/README.md)
+
+### Composability Example
+
+```python
+# Complete MLAT pipeline using SDK modules
+from mlat_core import MLATCalculator, SensorReading
+from hedera_logger import HederaLogger
+from neuron_client import NeuronClient
+
+# Initialize components
+neuron = NeuronClient(buyer_account_id="0.0.6324974", sensor_ids=[...])
+mlat = MLATCalculator(min_sensors=4)
+hedera = HederaLogger(operator_id="0.0.123", operator_key="...")
+
+# Fetch sensor data
+messages = await neuron.fetch_recent_messages(time_window_seconds=60)
+
+# Convert to sensor readings
+readings = [
+    SensorReading(
+        sensor_id=msg.sensor_id,
+        icao_address=msg.icao_address,
+        timestamp_ns=msg.timestamp_ns,
+        latitude=msg.sensor_latitude,
+        longitude=msg.sensor_longitude
+    )
+    for msg in messages
+]
+
+# Calculate position
+result = mlat.calculate_position("ABC123", readings)
+
+# Log to Hedera
+if result.position:
+    await hedera.log_position("0.0.7968510", {
+        "icao": result.position.icao_address,
+        "lat": result.position.latitude,
+        "lon": result.position.longitude,
+        "confidence": result.position.confidence_score
+    })
+```
 
 ## 🚀 Quick Start
 > **Prereqs**: Python 3.12+, Node 20+/pnpm 9, Supabase account, Hedera testnet credentials, Neuron buyer credentials.
@@ -169,12 +269,80 @@ python scripts/replay_modes.py --generate data/test.ndjson --aircraft 5 --messag
 python scripts/replay_modes.py --file data/test.ndjson --batch-size 10
 ```
 
-## 📄 Additional Documentation
+## � Future: SDK Distribution
+
+The modular architecture is designed to evolve into distributable SDKs for the broader Neuron and Hedera developer community.
+
+### Planned SDK Packages
+
+#### Python SDK
+```bash
+pip install aircraftworth-mlat      # MLAT calculation engine
+pip install aircraftworth-hedera    # Hedera HCS/HTS integration
+pip install aircraftworth-neuron    # Neuron sensor client
+```
+
+#### TypeScript/JavaScript SDK
+```bash
+npm install @aircraftworth/mlat-core
+npm install @aircraftworth/hedera-logger
+npm install @aircraftworth/neuron-client
+```
+
+### SDK Roadmap
+
+**Phase 1: Module Stabilization** (Current)
+- ✅ Extract core logic into independent modules
+- ✅ Add comprehensive documentation
+- ✅ Create usage examples
+- ⏳ Add unit tests for each module
+- ⏳ Define stable APIs
+
+**Phase 2: Package Distribution**
+- [ ] Set up PyPI packaging for Python modules
+- [ ] Set up npm packaging for TypeScript ports
+- [ ] Create GitHub releases with versioning
+- [ ] Add CI/CD for automated testing and publishing
+
+**Phase 3: Developer Experience**
+- [ ] Interactive documentation with examples
+- [ ] CLI tools for common operations
+- [ ] Integration guides for popular frameworks
+- [ ] Community templates and starter kits
+
+**Phase 4: Advanced Features**
+- [ ] Full TDOA implementation (currently using centroid)
+- [ ] Kalman filtering for position smoothing
+- [ ] Support for multiple MLAT algorithms
+- [ ] Performance optimizations and caching
+- [ ] WebAssembly builds for browser usage
+
+### Why SDK?
+
+**For Developers:**
+- Build custom MLAT applications without reinventing the wheel
+- Integrate aircraft tracking into existing systems
+- Leverage Hedera for verifiable position data
+
+**For Neuron Network:**
+- Standardized interface for sensor data consumption
+- Lower barrier to entry for new participants
+- Ecosystem growth through composability
+
+**For Hedera:**
+- Reference implementation for HCS/HTS in aviation
+- Demonstrates real-world DLT use cases
+- Enables new applications on Hedera network
+
+## �📄 Additional Documentation
 - [`docs/NEURON_BOUNTY_PRD.md`](docs/NEURON_BOUNTY_PRD.md): Original Neuron bounty strategy and architecture.
 - [`docs/improved_prd.md`](docs/improved_prd.md): Enhanced PRD with 10/10 fit roadmap and implementation plan.
 - [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md): Step-by-step Supabase schema setup and troubleshooting.
 - [`backend/README.md`](backend/README.md): Backend specific commands, endpoints, and testing.
 - [`backend/supabase/schema.sql`](backend/supabase/schema.sql): PostgreSQL schema with PostGIS extensions.
+- [`backend/mlat-core/README.md`](backend/mlat-core/README.md): MLAT calculation engine documentation.
+- [`backend/hedera-logger/README.md`](backend/hedera-logger/README.md): Hedera integration module documentation.
+- [`backend/neuron-client/README.md`](backend/neuron-client/README.md): Neuron sensor client documentation.
 
 ## 🏆 Neuron Bounty Alignment
 
