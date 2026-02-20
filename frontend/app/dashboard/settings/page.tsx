@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { Bot, Bell, Palette, Shield } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Bot, Bell, Palette, Shield, ExternalLink } from "lucide-react"
 
 export default function SettingsPage() {
   const [agentAutoPublish, setAgentAutoPublish] = useState(true)
