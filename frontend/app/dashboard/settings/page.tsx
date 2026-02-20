@@ -2,19 +2,14 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import { Wallet, Bot, Bell, Palette, Shield, CheckCircle, AlertCircle, ExternalLink } from "lucide-react"
-
-import { useWalletInterface } from '../../../lib/wallets/useWalletInterface'
+import { Bot, Bell, Palette, Shield } from "lucide-react"
 
 export default function SettingsPage() {
-  const { walletInterface, accountId, isConnected } = useWalletInterface()
   const [agentAutoPublish, setAgentAutoPublish] = useState(true)
   const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState("80")
   const [emailNotifications, setEmailNotifications] = useState(true)
@@ -35,49 +30,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-6">
-        {/* Wallet Connection */}
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground text-lg">
-              <Wallet className="w-5 h-5 text-primary" />
-              Wallet Connection
-            </CardTitle>
-            <CardDescription>
-              Connect your Hedera wallet to interact with the network
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isConnected ? (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Connected</p>
-                    <p className="text-xs text-muted-foreground font-mono">{accountId}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-warning" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Not Connected</p>
-                    <p className="text-xs text-muted-foreground">Connect your Hedera wallet to start</p>
-                  </div>
-                </div>
-                <Button onClick={() => walletInterface?.connect()}>
-                  Connect Wallet
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Agent Preferences */}
         <Card className="bg-card border-border">
           <CardHeader>
