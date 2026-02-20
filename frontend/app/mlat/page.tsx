@@ -25,6 +25,8 @@ export default function MLATDashboard() {
   })
 
   useEffect(() => {
+    if (!supabase) return
+
     // Fetch initial data
     fetchPositions()
     fetchSensors()
@@ -53,6 +55,8 @@ export default function MLATDashboard() {
   }, [])
 
   const fetchPositions = async () => {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('aircraft_positions')
       .select('*')
@@ -66,6 +70,8 @@ export default function MLATDashboard() {
   }
 
   const fetchSensors = async () => {
+    if (!supabase) return
+
     const { data, error } = await supabase
       .from('sensors')
       .select('*')
