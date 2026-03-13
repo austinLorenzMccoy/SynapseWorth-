@@ -26,20 +26,45 @@ import KpiStrip from '@/components/demo/KpiStrip'
 import HederaProofStrip from '@/components/demo/HederaProofStrip'
 import ReplayToggle from '@/components/demo/ReplayToggle'
 import WalletConnectButton from '@/components/hedera/WalletConnectButton'
+import ClientOnlyWrapper from '@/components/hedera/ClientOnlyWrapper'
 import { MLATNav } from '@/components/mlat-nav'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { MapPin } from 'lucide-react'
 
 export default function MLATDashboard() {
+  const [mounted, setMounted] = useState(false)
   const [positions, setPositions] = useState<AircraftPosition[]>([])
   const [sensors, setSensors] = useState<Sensor[]>([])
   const [selectedAircraft, setSelectedAircraft] = useState<any>(null)
   const [stats, setStats] = useState({
     totalAircraft: 0,
     avgConfidence: 0,
-    activeSensors: 0,
-    hederaLogs: 0
+    hederaLogs: 0,
+    activeSensors: 0
   })
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    // Load demo data
+    const demoPositions = demoAircraft.map(aircraft => ({
+      id: aircraft.id,
+      icao_address: aircraft.icao_address || aircraft.icao,
+      latitude: aircraft.lat,
+      longitude: aircraft.lon,
+      altitude_ft: aircraft.alt_ft,
+      confidence_score: aircraft.confidence,
+      calculated_at: aircraft.calculated_at,
+      has_adsb: aircraft.has_adsb,
+      sensor_count: aircraft.sensor_count
+    }))
+    setPositions(demoPositions)
+    setSensors(demoSensors)
+    updateStats(demoPositions)
+  }, [mounted])
 
   useEffect(() => {
     if (!supabase) return
@@ -163,7 +188,9 @@ export default function MLATDashboard() {
               Real-time multilateration using Neuron sensor network + Hedera consensus
             </p>
           </div>
-          <WalletConnectButton />
+          <ClientOnlyWrapper fallback={<div className="w-80 h-32 bg-muted animate-pulse rounded-lg" />}>
+            <WalletConnectButton />
+          </ClientOnlyWrapper>
         </div>
       </div>
 
