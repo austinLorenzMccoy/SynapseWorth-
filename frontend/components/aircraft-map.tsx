@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { type AircraftPosition, type Sensor } from '@/lib/supabase'
+import { useGhostFlight } from '@/components/map/GhostFlight'
 
 // Fix Leaflet default icon issue with Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -33,6 +34,9 @@ export default function AircraftMap({ positions, sensors, onAircraftSelect }: Ai
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19,
       }).addTo(mapRef.current)
+
+      // Initialize GhostFlight animated demo aircraft
+      useGhostFlight(mapRef.current)
     }
 
     return () => {
