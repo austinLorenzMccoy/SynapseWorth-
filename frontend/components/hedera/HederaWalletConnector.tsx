@@ -16,6 +16,7 @@ interface HederaWallet {
 }
 
 export function useHederaWallet(): HederaWallet {
+  const [mounted, setMounted] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [accountId, setAccountId] = useState<string | null>(null)
   const [balance, setBalance] = useState(0)
@@ -23,13 +24,19 @@ export function useHederaWallet(): HederaWallet {
   const [walletType, setWalletType] = useState<string | null>(null)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
     // Check if wallet is already connected on mount
     checkConnection()
-  }, [])
+  }, [mounted])
 
   const checkConnection = async () => {
     try {
       // Check for existing connection in localStorage or session
+      if (typeof window === 'undefined') return
       const savedConnection = localStorage.getItem('hedera_wallet_connection')
       if (savedConnection) {
         const connection = JSON.parse(savedConnection)
@@ -56,11 +63,13 @@ export function useHederaWallet(): HederaWallet {
       setWalletType('HashPack')
       
       // Save connection
-      localStorage.setItem('hedera_wallet_connection', JSON.stringify({
-        accountId: mockAccountId,
-        walletType: 'HashPack',
-        connectedAt: new Date().toISOString()
-      }))
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hedera_wallet_connection', JSON.stringify({
+          accountId: mockAccountId,
+          walletType: 'HashPack',
+          connectedAt: new Date().toISOString()
+        }))
+      }
       
       console.log('Wallet connected successfully!')
     } catch (error) {
@@ -72,7 +81,9 @@ export function useHederaWallet(): HederaWallet {
   const disconnect = async () => {
     try {
       // Clear connection
-      localStorage.removeItem('hedera_wallet_connection')
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('hedera_wallet_connection')
+      }
       setIsConnected(false)
       setAccountId(null)
       setBalance(0)

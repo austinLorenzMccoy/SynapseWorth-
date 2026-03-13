@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useHederaWallet } from './HederaWalletConnector'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,9 +8,24 @@ import { Badge } from '@/components/ui/badge'
 import { Wallet, Wallet2, AlertCircle, CheckCircle, Copy } from 'lucide-react'
 
 export default function WalletConnectButton() {
+  const [mounted, setMounted] = useState(false)
   const { isConnected, accountId, balance, network, walletType, connect, disconnect } = useHederaWallet()
   const [isConnecting, setIsConnecting] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardContent className="p-4">
+          <div className="h-20 bg-muted animate-pulse rounded-lg" />
+        </CardContent>
+      </Card>
+    )
+  }
 
   const handleConnect = async () => {
     setIsConnecting(true)
