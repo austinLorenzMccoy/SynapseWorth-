@@ -1,5 +1,7 @@
 # AircraftWorth SDK
 
+![npm](https://img.shields.io/npm/v/@aircraftworth/hedera-logger?style=flat&logo=npm) ![PyPI](https://img.shields.io/pypi/v/aircraftworth-mlat?style=flat&logo=pypi) ![PyPI](https://img.shields.io/pypi/v/aircraftworth-neuron?style=flat&logo=pypi) ![Python](https://img.shields.io/badge/Python-3.8+-blue?style=flat-square&logo=python) ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript) ![Hedera](https://img.shields.io/badge/Hedera-Hashgraph-9cf?style=flat-square) ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+
 **Decentralized Aviation Tracking & Data Marketplace SDK**
 
 A comprehensive suite of libraries for building next-generation aviation tracking applications on Hedera Hashgraph. The AircraftWorth SDK provides everything you need to implement multilateration, sensor networks, and blockchain-based data provenance.
