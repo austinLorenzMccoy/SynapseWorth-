@@ -1,138 +1,209 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { HederaWalletConnect } from '@hashgraph/hedera-wallet-connect'
 
 interface HederaWallet {
   isConnected: boolean
   accountId: string | null
   balance: number
+  network: 'testnet' | 'mainnet'
+  walletType: string | null
   connect: () => Promise<void>
-  disconnect: () => void
+  disconnect: () => Promise<void>
   signTransaction: (transactionData: any) => Promise<any>
   sendTransaction: (signedTransaction: any) => Promise<any>
+  getAccountInfo: () => Promise<any>
 }
 
 export function useHederaWallet(): HederaWallet {
   const [isConnected, setIsConnected] = useState(false)
   const [accountId, setAccountId] = useState<string | null>(null)
   const [balance, setBalance] = useState(0)
+  const [network, setNetwork] = useState<'testnet' | 'mainnet'>('testnet')
+  const [walletType, setWalletType] = useState<string | null>(null)
+  const [walletConnect, setWalletConnect] = useState<HederaWalletConnect | null>(null)
 
   useEffect(() => {
-    // Check if wallet is already connected on mount
-    checkConnection()
+    // Initialize WalletConnect
+    initializeWalletConnect()
   }, [])
 
-  const checkConnection = async () => {
+  const initializeWalletConnect = async () => {
     try {
-      // Check for HashPack wallet
-      if (typeof window !== 'undefined' && (window as any).hashpack) {
-        const connection = await (window as any).hashpack.getConnection()
-        if (connection && connection.accountIds.length > 0) {
-          setAccountId(connection.accountIds[0])
-          setIsConnected(true)
-          await fetchBalance(connection.accountIds[0])
+      const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+      if (!projectId) {
+        console.warn('WalletConnect Project ID not found in environment variables')
+        return
+      }
+
+      const wc = new HederaWalletConnect({
+        projectId,
+        metadata: {
+          name: 'AircraftWorth',
+          description: 'Decentralized Aviation Tracking & Data Marketplace',
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://aircraft-worth.vercel.app',
+          icons: ['https://aircraft-worth.vercel.app/AircraftWorth-Icon.png']
         }
+      })
+
+      setWalletConnect(wc)
+
+      // Check for existing sessions
+      const sessions = await wc.getActiveSessions()
+      if (sessions.length > 0) {
+        const session = sessions[0]
+        setAccountId(session.namespaces['hedera'].accounts[0].split(':')[2])
+        setIsConnected(true)
+        setWalletType(session.namespaces['hedera'].accounts[0].split(':')[0])
+        await fetchBalance(session.namespaces['hedera'].accounts[0].split(':')[2])
       }
     } catch (error) {
-      console.error('Error checking wallet connection:', error)
-    }
-  }
-
-  const fetchBalance = async (account: string) => {
-    try {
-      // This would be a real API call to get account balance
-      // For now, mock balance
-      setBalance(Math.random() * 100)
-    } catch (error) {
-      console.error('Error fetching balance:', error)
+      console.error('Error initializing WalletConnect:', error)
     }
   }
 
   const connect = async () => {
+    if (!walletConnect) {
+      throw new Error('WalletConnect not initialized')
+    }
+
     try {
-      // Try HashPack wallet first
-      if (typeof window !== 'undefined' && (window as any).hashpack) {
-        const connection = await (window as any).hashpack.connectToWallet()
-        if (connection && connection.accountIds.length > 0) {
-          const accountId = connection.accountIds[0]
-          setAccountId(accountId)
-          setIsConnected(true)
-          await fetchBalance(accountId)
-          return
+      // Connect to wallet
+      const { uri } = await walletConnect.connect({
+        requiredNamespaces: {
+          hedera: {
+            chains: ['hedera:296'], // Testnet
+            methods: ['getAccountInfo', 'signAndExecuteTransaction', 'signTransaction'],
+            events: ['accountsChanged', 'chainChanged']
+          }
         }
+      })
+
+      // For mobile wallets, show QR code or deep link
+      if (uri) {
+        // Open QR code modal or mobile deep link
+        console.log('WalletConnect URI:', uri)
+        // In production, you'd show a QR code modal here
+        alert('Scan QR code with your mobile wallet or open the deep link')
       }
 
-      // Fallback to other wallets or manual connection
-      // For demo purposes, we'll simulate a connection
-      const mockAccountId = '0.0.1234567'
-      setAccountId(mockAccountId)
-      setIsConnected(true)
-      setBalance(Math.random() * 100)
+      // Wait for connection
+      const session = await walletConnect.waitForSession()
       
+      setAccountId(session.namespaces['hedera'].accounts[0].split(':')[2])
+      setIsConnected(true)
+      setWalletType(session.namespaces['hedera'].accounts[0].split(':')[0])
+      await fetchBalance(session.namespaces['hedera'].accounts[0].split(':')[2])
+
     } catch (error) {
       console.error('Error connecting wallet:', error)
-      throw new Error('Failed to connect wallet')
+      throw error
     }
   }
 
-  const disconnect = () => {
+  const disconnect = async () => {
+    if (!walletConnect) return
+
     try {
-      // Disconnect from HashPack if available
-      if (typeof window !== 'undefined' && (window as any).hashpack) {
-        (window as any).hashpack.disconnect()
-      }
-      
-      setAccountId(null)
+      await walletConnect.disconnect()
       setIsConnected(false)
+      setAccountId(null)
       setBalance(0)
+      setWalletType(null)
     } catch (error) {
       console.error('Error disconnecting wallet:', error)
     }
   }
 
-  const signTransaction = async (transactionData: any) => {
+  const fetchBalance = async (account: string) => {
     try {
-      if (!isConnected || !accountId) {
-        throw new Error('Wallet not connected')
-      }
+      if (!walletConnect) return
 
-      // For HashPack wallet
-      if (typeof window !== 'undefined' && (window as any).hashpack) {
-        const signedTransaction = await (window as any).hashpack.signTransaction(transactionData)
-        return signedTransaction
-      }
+      // Get account info including balance
+      const accountInfo = await walletConnect.request({
+        topic: walletConnect.getActiveSessions()[0]?.topic,
+        request: {
+          method: 'getAccountInfo',
+          params: {
+            accountId: account
+          }
+        }
+      })
 
-      // Fallback: simulate signing
-      return {
-        ...transactionData,
-        signature: 'mock_signature_' + Date.now()
-      }
+      setBalance(parseFloat(accountInfo.balance?.tokens?.HBAR || 0))
+    } catch (error) {
+      console.error('Error fetching balance:', error)
+      setBalance(0)
+    }
+  }
+
+  const signTransaction = async (transactionData: any) => {
+    if (!walletConnect || !isConnected) {
+      throw new Error('Wallet not connected')
+    }
+
+    try {
+      const result = await walletConnect.request({
+        topic: walletConnect.getActiveSessions()[0]?.topic,
+        request: {
+          method: 'signTransaction',
+          params: {
+            transaction: transactionData
+          }
+        }
+      })
+
+      return result
     } catch (error) {
       console.error('Error signing transaction:', error)
-      throw new Error('Failed to sign transaction')
+      throw error
     }
   }
 
   const sendTransaction = async (signedTransaction: any) => {
+    if (!walletConnect || !isConnected) {
+      throw new Error('Wallet not connected')
+    }
+
     try {
-      // This would send the transaction to Hedera network
-      // For demo purposes, simulate successful transaction
-      const transactionId = `0.0.${Math.floor(Math.random() * 1000000)}@${Date.now()}`
-      
-      return {
-        success: true,
-        transactionId,
-        receipt: {
-          status: 'SUCCESS',
-          exchangeRate: {
-            Hbars: 1,
-            cents: 12000 // $0.12 per HBAR
+      const result = await walletConnect.request({
+        topic: walletConnect.getActiveSessions()[0]?.topic,
+        request: {
+          method: 'signAndExecuteTransaction',
+          params: {
+            transaction: signedTransaction
           }
         }
-      }
+      })
+
+      return result
     } catch (error) {
       console.error('Error sending transaction:', error)
-      throw new Error('Failed to send transaction')
+      throw error
+    }
+  }
+
+  const getAccountInfo = async () => {
+    if (!walletConnect || !accountId) {
+      throw new Error('Wallet not connected')
+    }
+
+    try {
+      const accountInfo = await walletConnect.request({
+        topic: walletConnect.getActiveSessions()[0]?.topic,
+        request: {
+          method: 'getAccountInfo',
+          params: {
+            accountId: accountId
+          }
+        }
+      })
+
+      return accountInfo
+    } catch (error) {
+      console.error('Error getting account info:', error)
+      throw error
     }
   }
 
@@ -140,90 +211,14 @@ export function useHederaWallet(): HederaWallet {
     isConnected,
     accountId,
     balance,
+    network,
+    walletType,
     connect,
     disconnect,
     signTransaction,
-    sendTransaction
+    sendTransaction,
+    getAccountInfo
   }
 }
 
-// Wallet connection component
-export default function HederaWalletConnector({ 
-  onConnect, 
-  onDisconnect 
-}: { 
-  onConnect?: (accountId: string) => void
-  onDisconnect?: () => void 
-}) {
-  const wallet = useHederaWallet()
-
-  useEffect(() => {
-    if (wallet.isConnected && wallet.accountId) {
-      onConnect?.(wallet.accountId)
-    } else {
-      onDisconnect?.()
-    }
-  }, [wallet.isConnected, wallet.accountId, onConnect, onDisconnect])
-
-  if (wallet.isConnected) {
-    return (
-      <div className="flex items-center space-x-4 bg-green-50 border border-green-200 rounded-lg p-4">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span className="text-green-800 font-medium">Connected</span>
-        </div>
-        <div className="text-sm text-gray-600">
-          <div>Account: {wallet.accountId}</div>
-          <div>Balance: {wallet.balance.toFixed(6)} HBAR</div>
-        </div>
-        <button
-          onClick={wallet.disconnect}
-          className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Disconnect
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="text-center">
-      <div className="mb-4">
-        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl">🔗</span>
-        </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Connect Your Hedera Wallet</h3>
-        <p className="text-gray-600 mb-4">
-          Connect your HashPack or other Hedera wallet to complete this purchase
-        </p>
-      </div>
-      
-      <div className="space-y-3">
-        <button
-          onClick={wallet.connect}
-          className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-        >
-          Connect HashPack Wallet
-        </button>
-        
-        <div className="text-sm text-gray-500">
-          Don't have a wallet?{' '}
-          <a 
-            href="https://www.hashpack.app/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-indigo-600 hover:text-indigo-800"
-          >
-            Download HashPack
-          </a>
-        </div>
-        
-        <div className="text-xs text-gray-400 border-t pt-3">
-          <p>• Your wallet will be used to sign the payment transaction</p>
-          <p>• No funds will be transferred without your approval</p>
-          <p>• All transactions are recorded on the Hedera blockchain</p>
-        </div>
-      </div>
-    </div>
-  )
-}
+export default useHederaWallet

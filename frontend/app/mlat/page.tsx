@@ -25,6 +25,7 @@ import JudgeBanner from '@/components/demo/JudgeBanner'
 import KpiStrip from '@/components/demo/KpiStrip'
 import HederaProofStrip from '@/components/demo/HederaProofStrip'
 import ReplayToggle from '@/components/demo/ReplayToggle'
+import WalletConnectButton from '@/components/hedera/WalletConnectButton'
 import { MLATNav } from '@/components/mlat-nav'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { MapPin } from 'lucide-react'
@@ -153,12 +154,17 @@ export default function MLATDashboard() {
       <div className="p-6 max-w-7xl mx-auto" style={{ paddingBottom: '80px' }}> {/* Add padding for HederaProofStrip */}
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">
-          Aircraft Tracking - MLAT Dashboard
-        </h2>
-        <p className="text-muted-foreground">
-          Real-time multilateration using Neuron sensor network + Hedera consensus
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Aircraft Tracking - MLAT Dashboard
+            </h2>
+            <p className="text-muted-foreground">
+              Real-time multilateration using Neuron sensor network + Hedera consensus
+            </p>
+          </div>
+          <WalletConnectButton />
+        </div>
       </div>
 
       {/* AI Query Bar */}
