@@ -13,8 +13,13 @@
  * Magic-link token verification handled by /api/auth/verify route.
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+// ─── Component ────────────────────────────────────────────────────────────────
+function OnboardingPage() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Step = 'wallet' | 'email' | 'check-email' | 'verifying' | 'enrolled' | 'error';
@@ -439,6 +444,32 @@ export default function OnboardingPage() {
         input:focus { border-color: #7B8FFF !important; }
       `}</style>
     </div>
+  );
+}
+
+// ─── Main Page Component with Suspense Boundary ───────────────────────────────
+export default function OnboardingWrapper() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        background: '#080B0F',
+        color: '#E6EAF0',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '32px 16px',
+      }}>
+        <div style={{ fontSize: '32px', marginBottom: '16px', animation:'spin 1s linear infinite' }}>◎</div>
+        <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Loading...</div>
+        <div style={{ fontSize: '13px', color: '#666' }}>Preparing your onboarding experience</div>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <OnboardingPage />
+    </Suspense>
   );
 }
 
