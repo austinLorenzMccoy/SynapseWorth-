@@ -72,7 +72,7 @@ const PLANS = [
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function OnboardingPage() {
+function OnboardingPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
@@ -96,21 +96,28 @@ export default function OnboardingPage() {
   // Verify magic link token
   const verifyToken = async (token: string) => {
     try {
-      const response = await fetch('/api/auth/verify', {
+      const res = await fetch('/api/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-      const result = await response.json();
-      
-      if (result.valid) {
-        setStep('enrolled');
-      } else {
-        setError('Invalid or expired magic link');
-        setStep('error');
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error ?? 'Verification failed');
+
+      // Token valid — restore wallet state from token payload if available
+      if (data.walletAddress) {
+        setWallet({ address: data.walletAddress, chainId: '0x1', provider: 'injected' });
       }
-    } catch (err) {
-      setError('Failed to verify magic link');
+      if (data.email) setEmail(data.email);
+
+      setStep('enrolled');
+
+      // Redirect to dashboard after 3s
+      setTimeout(() => router.push('/mlat'), 3000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Token verification failed');
       setStep('error');
     }
   };
@@ -185,35 +192,6 @@ export default function OnboardingPage() {
       setSending(false);
     }
   }, [email, wallet, plan]);
-
-  // ── Verify token (from magic-link click) ─────────────────────────────────────
-  async function verifyToken(token: string) {
-    try {
-      const res = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error ?? 'Verification failed');
-
-      // Token valid — restore wallet state from token payload if available
-      if (data.walletAddress) {
-        setWallet({ address: data.walletAddress, chainId: '0x1', provider: 'injected' });
-      }
-      if (data.email) setEmail(data.email);
-
-      setStep('enrolled');
-
-      // Redirect to dashboard after 3s
-      setTimeout(() => router.push('/mlat'), 3000);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Token verification failed');
-      setStep('error');
-    }
-  }
 
   // ── Render helpers ────────────────────────────────────────────────────────────
   const S = styles;
