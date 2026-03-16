@@ -6,6 +6,7 @@ import os
 from routers import agent, evaluation, hedera, auth
 # from routers import mlat  # Temporarily disabled due to websockets conflict
 from api.intelligence import router as intelligence_router
+from api.realtime_flights import router as flights_router
 
 load_dotenv()
 
@@ -25,6 +26,7 @@ app.include_router(hedera.router, prefix="/api/hedera", tags=["hedera"])
 # app.include_router(mlat.router, prefix="/api/mlat", tags=["mlat"])  # Temporarily disabled
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(intelligence_router)
+app.include_router(flights_router)
 
 @app.get("/")
 async def root():
