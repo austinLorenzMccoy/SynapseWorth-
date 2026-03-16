@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getLondonFlights, getFlightStats, Aircraft } from '../../lib/flight_tracking';
+import { queryAircraftAI, analyzeAirTraffic, AIQueryResponse } from '../../lib/ai_service';
 
 function svgIcon(color:string,heading:number,ghost:boolean){
   const pulse=ghost?`<circle cx="16" cy="16" r="5" fill="${color}" opacity="0.35"><animate attributeName="r" values="5;13;5" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite"/></circle>`:'';
@@ -58,6 +59,12 @@ export default function MLATPage(){
   const [reply,setReply]=useState('');
   const [loading,setLoading]=useState(false);
 
+  // AI Query state
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiResponse, setAiResponse] = useState<AIQueryResponse | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAI, setShowAI] = useState(false);
+
   // Fetch real-time aircraft data using frontend service
   const fetchRealtimeAircraft = async () => {
     try {
@@ -85,6 +92,50 @@ export default function MLATPage(){
       setReply('Failed to fetch real-time flight data from OpenSky Network');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // AI Query function
+  const handleAIQuery = async () => {
+    if (!aiQuery.trim()) return;
+    
+    try {
+      setAiLoading(true);
+      setAiResponse(null);
+      
+      const response = await queryAircraftAI(aiQuery, {
+        aircraft: realtimeAircraft,
+        location: 'London Area',
+        timestamp: lastUpdate
+      });
+      
+      setAiResponse(response);
+    } catch (error) {
+      console.error('AI Query Error:', error);
+      setAiResponse({
+        response: 'Sorry, I encountered an error processing your query. Please try again.',
+        confidence: 0,
+        processing_time: 0,
+        model_used: 'error',
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Quick analysis function
+  const handleQuickAnalysis = async () => {
+    try {
+      setAiLoading(true);
+      setAiResponse(null);
+      
+      const response = await analyzeAirTraffic(realtimeAircraft);
+      setAiResponse(response);
+    } catch (error) {
+      console.error('Quick Analysis Error:', error);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -132,12 +183,85 @@ export default function MLATPage(){
           <div style={{fontSize:10,color:'#3DDC97',marginTop:2}}>
             🚀 No Backend Required
           </div>
+          <button
+            onClick={() => setShowAI(!showAI)}
+            style={{
+              marginTop:8,padding:'4px 8px',background:'#FFB020',border:'none',
+              borderRadius:4,color:'#0D1117',fontSize:10,fontWeight:600,cursor:'pointer'
+            }}
+          >
+            🤖 {showAI ? 'Hide' : 'Show'} AI
+          </button>
         </div>
       </div>
       
       <div style={{width:380,background:'#161B22',borderLeft:'1px solid #30363d',display:'flex',flexDirection:'column'}}>
+        {showAI && (
+          <div style={{padding:16,borderBottom:'1px solid #30363d',background:'#0D1117'}}>
+            <div style={{fontSize:14,fontWeight:600,color:'#FFB020',marginBottom:8,display:'flex',alignItems:'center',gap:6}}>
+              🤖 AircraftWorth AI
+            </div>
+            <textarea
+              placeholder="Ask about aircraft, flight patterns, or air traffic..."
+              value={aiQuery}
+              onChange={e => setAiQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAIQuery())}
+              style={{
+                width:'100%',minHeight:'60px',padding:'8px',background:'#0D1117',border:'1px solid #30363d',
+                borderRadius:6,color:'#E6EAF0',fontSize:12,outline:'none',resize:'vertical',
+                fontFamily:'system-ui,sans-serif'
+              }}
+            />
+            <div style={{display:'flex',gap:8,marginTop:8}}>
+              <button
+                onClick={handleAIQuery}
+                disabled={aiLoading || !aiQuery.trim()}
+                style={{
+                  flex:1,padding:'8px',background:'#FFB020',border:'none',
+                  borderRadius:6,color:'#0D1117',fontWeight:600,cursor:(aiLoading || !aiQuery.trim())?'not-allowed':'pointer',
+                  fontSize:12
+                }}
+              >
+                {aiLoading ? '🤔 Thinking...' : '🚀 Query AI'}
+              </button>
+              <button
+                onClick={handleQuickAnalysis}
+                disabled={aiLoading}
+                style={{
+                  padding:'8px 12px',background:'#3DDC97',border:'none',
+                  borderRadius:6,color:'#0D1117',fontWeight:600,cursor:aiLoading?'not-allowed':'pointer',
+                  fontSize:12
+                }}
+              >
+                📊 Quick Analysis
+              </button>
+            </div>
+            
+            {aiResponse && (
+              <div style={{
+                marginTop:12,padding:12,background:'#0D1117',border:'1px solid #FFB02044',
+                borderRadius:6,fontSize:11,color:'#E6EAF0',lineHeight:'1.5'
+              }}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                  <span style={{color:'#FFB020',fontWeight:600,fontSize:10}}>
+                    🤖 AI Response
+                  </span>
+                  <span style={{color:'#666',fontSize:9}}>
+                    {aiResponse.processing_time}ms • {Math.round(aiResponse.confidence * 100)}% confidence
+                  </span>
+                </div>
+                <div style={{color:'#E6EAF0',whiteSpace:'pre-wrap'}}>
+                  {aiResponse.response}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
         <div style={{padding:16,borderBottom:'1px solid #30363d'}}>
-          <div style={{fontSize:18,fontWeight:600,color:'#E6EAF0',marginBottom:8}}>AircraftWorth MLAT</div>
+          <div style={{fontSize:18,fontWeight:600,color:'#E6EAF0',marginBottom:8}}>
+            {showAI ? 'Aircraft List' : 'AircraftWorth MLAT'}
+          </div>
           <input
             placeholder="Search ICAO or callsign..."
             value={q}

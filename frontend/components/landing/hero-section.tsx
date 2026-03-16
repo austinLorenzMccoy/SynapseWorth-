@@ -66,10 +66,10 @@ export function HeroSection() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button asChild size="lg" className="group">
+            <Button asChild size="lg" className="group bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg">
               <Link href="/onboarding">
-                Start Free Trial
-                <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
+                Get Started
+                <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="border-border hover:bg-secondary/80 bg-transparent">
