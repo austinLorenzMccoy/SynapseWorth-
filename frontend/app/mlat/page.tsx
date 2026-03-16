@@ -194,60 +194,61 @@ export default function MLATPage(){
           <div style={{fontSize:14,fontWeight:600,color:'#FFB020',marginBottom:8,display:'flex',alignItems:'center',gap:6}}>
             🤖 AircraftWorth AI
           </div>
-            <textarea
-              placeholder="Ask about aircraft, flight patterns, or air traffic..."
-              value={aiQuery}
-              onChange={e => setAiQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAIQuery())}
+          <textarea
+            placeholder="Ask about aircraft, flight patterns, or air traffic..."
+            value={aiQuery}
+            onChange={e => setAiQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAIQuery())}
+            style={{
+              width:'100%',minHeight:'60px',padding:'8px',background:'#0D1117',border:'1px solid #30363d',
+              borderRadius:6,color:'#E6EAF0',fontSize:12,outline:'none',resize:'vertical',
+              fontFamily:'system-ui,sans-serif'
+            }}
+          />
+          <div style={{display:'flex',gap:8,marginTop:8}}>
+            <button
+              onClick={handleAIQuery}
+              disabled={aiLoading || !aiQuery.trim()}
               style={{
-                width:'100%',minHeight:'60px',padding:'8px',background:'#0D1117',border:'1px solid #30363d',
-                borderRadius:6,color:'#E6EAF0',fontSize:12,outline:'none',resize:'vertical',
-                fontFamily:'system-ui,sans-serif'
+                flex:1,padding:'8px',background:'#FFB020',border:'none',
+                borderRadius:6,color:'#0D1117',fontWeight:600,cursor:(aiLoading || !aiQuery.trim())?'not-allowed':'pointer',
+                fontSize:12
               }}
-            />
-            <div style={{display:'flex',gap:8,marginTop:8}}>
-              <button
-                onClick={handleAIQuery}
-                disabled={aiLoading || !aiQuery.trim()}
-                style={{
-                  flex:1,padding:'8px',background:'#FFB020',border:'none',
-                  borderRadius:6,color:'#0D1117',fontWeight:600,cursor:(aiLoading || !aiQuery.trim())?'not-allowed':'pointer',
-                  fontSize:12
-                }}
-              >
-                {aiLoading ? '🤔 Thinking...' : '🚀 Query AI'}
-              </button>
-              <button
-                onClick={handleQuickAnalysis}
-                disabled={aiLoading}
-                style={{
-                  padding:'8px 12px',background:'#3DDC97',border:'none',
-                  borderRadius:6,color:'#0D1117',fontWeight:600,cursor:aiLoading?'not-allowed':'pointer',
-                  fontSize:12
-                }}
-              >
-                📊 Quick Analysis
-              </button>
-            </div>
-            
-            {aiResponse && (
-              <div style={{
-                marginTop:12,padding:12,background:'#0D1117',border:'1px solid #FFB02044',
-                borderRadius:6,fontSize:11,color:'#E6EAF0',lineHeight:'1.5'
-              }}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                  <span style={{color:'#FFB020',fontWeight:600,fontSize:10}}>
-                    🤖 AI Response
-                  </span>
-                  <span style={{color:'#666',fontSize:9}}>
-                    {aiResponse.processing_time}ms • {Math.round(aiResponse.confidence * 100)}% confidence
-                  </span>
-                </div>
-                <div style={{color:'#E6EAF0',whiteSpace:'pre-wrap'}}>
-                  {aiResponse.response}
-                </div>
+            >
+              {aiLoading ? '🤔 Thinking...' : '🚀 Query AI'}
+            </button>
+            <button
+              onClick={handleQuickAnalysis}
+              disabled={aiLoading}
+              style={{
+                padding:'8px 12px',background:'#3DDC97',border:'none',
+                borderRadius:6,color:'#0D1117',fontWeight:600,cursor:aiLoading?'not-allowed':'pointer',
+                fontSize:12
+              }}
+            >
+              📊 Quick Analysis
+            </button>
+          </div>
+          
+          {aiResponse && (
+            <div style={{
+              marginTop:12,padding:12,background:'#0D1117',border:'1px solid #FFB02044',
+              borderRadius:6,fontSize:11,color:'#E6EAF0',lineHeight:'1.5'
+            }}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                <span style={{color:'#FFB020',fontWeight:600,fontSize:10}}>
+                  🤖 AI Response
+                </span>
+                <span style={{color:'#666',fontSize:9}}>
+                  {aiResponse.processing_time}ms • {Math.round(aiResponse.confidence * 100)}% confidence
+                </span>
               </div>
-            )}
+              <div style={{color:'#E6EAF0',whiteSpace:'pre-wrap'}}>
+                {aiResponse.response}
+              </div>
+            </div>
+          )}
+        </div>
         
         <div style={{padding:16,borderBottom:'1px solid #30363d'}}>
           <div style={{fontSize:18,fontWeight:600,color:'#E6EAF0',marginBottom:8}}>
@@ -322,6 +323,7 @@ export default function MLATPage(){
             {loading?'🔄 Refreshing...':'🔄 Refresh Now'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
