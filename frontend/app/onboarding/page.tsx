@@ -106,7 +106,6 @@ function OnboardingPage() {
 
       if (!res.ok) throw new Error(data.error ?? 'Verification failed');
 
-      // Token valid — restore wallet state from token payload if available
       if (data.walletAddress) {
         setWallet({ address: data.walletAddress, chainId: '0x1', provider: 'injected' });
       }
@@ -322,21 +321,19 @@ function OnboardingPage() {
           {/* Email input */}
           <div style={{ marginTop:'8px' }}>
             <div style={{ color:'#888', fontSize:'11px', marginBottom:'6px', letterSpacing:'1px' }}>EMAIL ADDRESS</div>
-            <div style={{ display:'flex', gap:'10px' }}>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMagicLink()}
-                placeholder="you@example.com"
-                style={S.input}
-                autoFocus
-              />
-              <button onClick={sendMagicLink} disabled={sending}
-                style={{ ...S.btn, ...S.btnPrimary, flexShrink:0, minWidth:'140px', justifyContent:'center' }}>
-                {sending ? '⟳ Sending…' : '✉ Send Magic Link'}
-              </button>
-            </div>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMagicLink()}
+              placeholder="you@example.com"
+              style={{ ...S.input, marginBottom:'10px' }}
+              autoFocus
+            />
+            <button onClick={sendMagicLink} disabled={sending}
+              style={{ ...S.btn, ...S.btnPrimary, justifyContent:'center', width:'100%' }}>
+              {sending ? '⟳ Sending…' : '✉ Send Magic Link'}
+            </button>
             <div style={{ color:'#444', fontSize:'11px', marginTop:'8px' }}>
               We'll send a one-click sign-in link. No password needed.
             </div>
