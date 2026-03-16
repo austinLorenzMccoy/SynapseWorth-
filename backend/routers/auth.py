@@ -91,6 +91,15 @@ async def send_magic_link(request: MagicLinkRequest, supabase: SupabaseService =
         
         token = jwt.encode(token_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
         
+        # Store token in database
+        token_data = {
+            'token': token,
+            'email': request.email,
+            'wallet_address': request.wallet_address,
+            'expires_at': datetime.utcnow() + timedelta(minutes=15)
+        }
+        supabase.client.table('magic_link_tokens').insert(token_data).execute()
+        
         # Create magic link URL
         magic_link_url = f"{FRONTEND_URL}/auth/magic-link?token={token}"
         
@@ -172,7 +181,32 @@ async def verify_magic_link(token: str, supabase: SupabaseService = Depends()):
     """Verify magic link token and return user info"""
     
     try:
-        # Decode token
+        # Check if token exists and is valid in database
+        token_result = supabase.client.table('magic_link_tokens').select('*').eq('token', token).execute()
+        
+        if not token_result.data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid magic link"
+            )
+        
+        token_record = token_result.data[0]
+        
+        # Check if token has been used
+        if token_record.get('used', False):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Magic link has already been used"
+            )
+        
+        # Check if token has expired
+        if datetime.utcnow() > datetime.fromisoformat(token_record['expires_at'].replace('Z', '+00:00')):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Magic link has expired"
+            )
+        
+        # Decode JWT token for additional validation
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         email = payload.get("email")
         wallet_address = payload.get("wallet_address")
@@ -187,6 +221,11 @@ async def verify_magic_link(token: str, supabase: SupabaseService = Depends()):
             )
         
         user = user_result.data[0]
+        
+        # Mark token as used
+        supabase.client.table('magic_link_tokens').update({
+            'used': True
+        }).eq('token', token).execute()
         
         # Create session token
         session_token = secrets.token_urlsafe(32)
@@ -240,17 +279,52 @@ async def verify_magic_link(token: str, supabase: SupabaseService = Depends()):
             detail="Invalid magic link"
         )
 
-@router.get("/profile")
-async def get_user_profile(supabase: SupabaseService = Depends()):
-    """Get current user profile"""
-    # TODO: Implement JWT session validation from frontend
-    return {"message": "Session validation required"}
+@router.post("/cleanup-expired-tokens")
+async def cleanup_expired_tokens(supabase: SupabaseService = Depends()):
+    """Clean up expired magic link tokens"""
+    
+    try:
+        # Delete expired tokens
+        result = supabase.client.table('magic_link_tokens').delete().lt('expires_at', datetime.utcnow().isoformat()).execute()
+        
+        return {
+            "message": "Cleanup completed",
+            "deleted_tokens": len(result.data) if result.data else 0
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cleanup tokens: {str(e)}"
+        )
 
-@router.post("/analytics")
-async def track_user_analytics(
-    event_data: dict,
-    supabase: SupabaseService = Depends()
-):
-    """Track user analytics events"""
-    # TODO: Implement JWT session validation from frontend
-    return {"message": "Session validation required"}
+@router.get("/token-stats")
+async def get_token_stats(supabase: SupabaseService = Depends()):
+    """Get magic link token statistics"""
+    
+    try:
+        # Get total tokens
+        total_result = supabase.client.table('magic_link_tokens').select('*', count='exact').execute()
+        total_tokens = total_result.count or 0
+        
+        # Get used tokens
+        used_result = supabase.client.table('magic_link_tokens').select('*', count='exact').eq('used', True).execute()
+        used_tokens = used_result.count or 0
+        
+        # Get expired but not used tokens
+        expired_result = supabase.client.table('magic_link_tokens').select('*', count='exact').lt('expires_at', datetime.utcnow().isoformat()).eq('used', False).execute()
+        expired_tokens = expired_result.count or 0
+        
+        return {
+            "total_tokens": total_tokens,
+            "used_tokens": used_tokens,
+            "expired_tokens": expired_tokens,
+            "active_tokens": total_tokens - used_tokens - expired_tokens,
+            "conversion_rate": f"{(used_tokens / total_tokens * 100):.1f}%" if total_tokens > 0 else "0%"
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get stats: {str(e)}"
+        )
