@@ -56,12 +56,12 @@ async function connectHashPackViaWC(
   onError: (msg: string) => void
 ) {
   try {
-    const { DAppConnector, HederaSessionEvent, HederaJsonRpcMethod, LedgerId } =
+    const { DAppConnector, HederaSessionEvent, HederaJsonRpcMethod } =
       await import('@hashgraph/hedera-wallet-connect');
 
     const connector = new DAppConnector(
       WC_APP_METADATA,
-      LedgerId.TESTNET,
+      'testnet',
       WC_PROJECT_ID,
       Object.values(HederaJsonRpcMethod),
       [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
@@ -445,10 +445,30 @@ function OnboardingPage() {
             ))}
           </div>
 
-          {/* Demo notice */}
-          <div style={{ margin:'16px 0 8px', padding:'10px 14px', background:'#FFB02011', border:'1px solid #FFB02044', borderRadius:'8px', fontSize:'12px', color:'#FFB020', lineHeight:'1.6' }}>
-            ⚠ <strong>Demo notice:</strong> During our hackathon demo period, magic links can only be delivered to <strong style={{ fontFamily:'monospace' }}>alphonsuschibueze10@gmail.com</strong> due to Resend free-tier restrictions. Enter that address below to experience the full onboarding flow.
+          {/* Judge Access */}
+          <div style={{ margin:'16px 0 8px', padding:'10px 14px', background:'#3DDC9711', border:'1px solid #3DDC9744', borderRadius:'8px', fontSize:'12px', color:'#3DDC97', lineHeight:'1.6' }}>
+            🚀 <strong>Hackathon Judges:</strong> Skip email verification and access live demo directly. Test real-time flight tracking and AI features instantly.
           </div>
+
+          {/* Judge Access Button */}
+          <button 
+            onClick={() => router.push('/mlat')} 
+            style={{ 
+              ...S.btn, 
+              background:'#3DDC97', 
+              border:'1px solid #3DDC9744', 
+              color:'#0D1117', 
+              justifyContent:'center', 
+              width:'100%',
+              marginBottom:'16px',
+              fontWeight:700 
+            }}
+          >
+            ⚡ Judge Access - Go to Live Demo
+          </button>
+
+          {/* Divider */}
+          <div style={S.divider}><span style={S.dividerText}>or</span></div>
 
           {/* Email input */}
           <div style={{ marginTop:'8px' }}>
@@ -458,7 +478,7 @@ function OnboardingPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMagicLink()}
-              placeholder="alphonsuschibueze10@gmail.com"
+              placeholder="Enter your email address"
               style={{ ...S.input, marginBottom:'10px' }}
               autoFocus
             />

@@ -18,24 +18,25 @@ const quickActions = [
     icon: Zap,
   },
   {
-    title: "Sensor Network",
-    description: "Manage Neuron sensor nodes and coverage areas",
-    href: "/dashboard/sensors",
-    icon: MapPin,
+    title: "Wallet Settings",
+    description: "Manage connected wallets and accounts",
+    href: "/dashboard/wallet",
+    icon: Coins,
   },
   {
-    title: "User Analytics",
-    description: "Track user activity and system performance",
-    href: "/dashboard/analytics",
-    icon: TrendingUp,
+    title: "System Status",
+    description: "Monitor system health and API connections",
+    href: "/dashboard/status",
+    icon: Activity,
   },
 ]
 
-const stats = [
-  { label: "Aircraft Tracked", value: "147", icon: Radar, change: "+24%" },
-  { label: "Active Sensors", value: "12", icon: MapPin, change: "+2" },
-  { label: "AI Queries", value: "3,847", icon: Zap, change: "+156%" },
-  { label: "System Users", value: "89", icon: Users, change: "+12%" },
+// Real system status - no fake data
+const systemStatus = [
+  { label: "OpenSky Network", value: "Connected", icon: Radar, status: "online" },
+  { label: "Groq AI", value: "Ready", icon: Zap, status: "online" },
+  { label: "Supabase DB", value: "Active", icon: Activity, status: "online" },
+  { label: "WalletConnect", value: "Configured", icon: Coins, status: "online" },
 ]
 
 export default function DashboardPage() {
@@ -74,21 +75,21 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="bg-card border-border">
+      {/* System Status cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        {systemStatus.map((status) => (
+          <Card key={status.label} className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold text-foreground font-mono">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{status.label}</p>
+                  <p className="text-lg font-bold text-foreground font-mono">{status.value}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <stat.icon className="w-5 h-5 text-primary" />
+                    <status.icon className="w-5 h-5 text-primary" />
                   </div>
-                  <span className="text-xs text-success font-mono">{stat.change}</span>
+                  <span className="text-xs text-success font-mono">●</span>
                 </div>
               </div>
             </CardContent>
