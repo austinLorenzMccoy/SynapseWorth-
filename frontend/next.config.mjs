@@ -11,13 +11,13 @@ const nextConfig = {
   // Stubs out Node.js-only packages pulled in by @hashgraph/hedera-wallet-connect
   turbopack: {
     resolveAlias: {
-      'pino': { browser: 'pino/browser' },
-      'thread-stream': { browser: false },
-      'pino-pretty': { browser: false },
-      'sonic-boom': { browser: false },
-      'on-exit-leak-free': { browser: false },
-      'pino-abstract-transport': { browser: false },
-      'real-require': { browser: false },
+      'pino': 'pino/browser',
+      'thread-stream': './empty-module.js',
+      'pino-pretty': './empty-module.js',
+      'sonic-boom': './empty-module.js',
+      'on-exit-leak-free': './empty-module.js',
+      'pino-abstract-transport': './empty-module.js',
+      'real-require': './empty-module.js',
     },
   },
 
@@ -32,8 +32,6 @@ const nextConfig = {
         dns: false,
         child_process: false,
         worker_threads: false,
-        'thread-stream': false,
-        'pino-pretty': false,
       };
       config.externals = [
         ...(Array.isArray(config.externals) ? config.externals : []),
