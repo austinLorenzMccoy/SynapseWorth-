@@ -42,55 +42,8 @@ function shortAddress(addr: string) {
 }
 
 // ─── WalletConnect config ─────────────────────────────────────────────────────
-const WC_PROJECT_ID = 'b37ae237496a79a6899681d202da6990';
-const WC_APP_METADATA = {
-  name: 'AircraftWorth',
-  description: 'Distributed MLAT aircraft tracking on Hedera',
-  url: 'https://aircraft-worth.vercel.app',
-  icons: ['https://aircraft-worth.vercel.app/AircraftWorth-Icon.svg'],
-};
-
-// ─── HashPack via @hashgraph/hedera-wallet-connect ────────────────────────────
-async function connectHashPackViaWC(
-  onSuccess: (accountId: string) => void,
-  onError: (msg: string) => void
-) {
-  try {
-    const { DAppConnector, HederaSessionEvent, HederaJsonRpcMethod } =
-      await import('@hashgraph/hedera-wallet-connect');
-
-    const connector = new DAppConnector(
-      WC_APP_METADATA,
-      'testnet',
-      WC_PROJECT_ID,
-      Object.values(HederaJsonRpcMethod),
-      [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
-    );
-
-    await connector.init({ logger: 'error' });
-
-    // openModal handles QR code / HashPack deep link automatically
-    const session = await connector.openModal();
-
-    const accounts = session?.namespaces?.hedera?.accounts ?? [];
-    if (accounts.length) {
-      // format: "hedera:testnet:0.0.xxxxx"
-      const accountId = accounts[0].split(':')[2];
-      onSuccess(accountId);
-    } else {
-      onError('No Hedera account found. Make sure HashPack is unlocked on testnet.');
-    }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Connection failed';
-    if (msg.toLowerCase().includes('reject') ||
-        msg.toLowerCase().includes('cancel') ||
-        msg.toLowerCase().includes('closed')) {
-      onError('Connection cancelled.');
-    } else {
-      onError(msg);
-    }
-  }
-}
+// Note: Hedera native wallet support coming soon post-hackathon
+// Current focus: MetaMask + Magic Link for clean demo
 
 // ─── Plan options ─────────────────────────────────────────────────────────────
 const PLANS = [
@@ -135,7 +88,6 @@ function OnboardingPage() {
   const [error,      setError]      = useState('');
   const [sending,    setSending]    = useState(false);
   const [hasWallet,  setHasWallet]  = useState(false);
-  const [wcLoading,  setWcLoading]  = useState(false);
 
   // Check if a magic-link token is in the URL
   useEffect(() => {
@@ -227,22 +179,10 @@ function OnboardingPage() {
   }, [router]);
 
   // ── Connect via HashPack browser extension ────────────────────────────────────
-  // ── Connect via HashPack / Hedera WalletConnect ───────────────────────────────
+  // ── Hedera Native (Coming Soon) ───────────────────────────────────────────────
   const connectHashPack = useCallback(async () => {
-    setError('');
-    setWcLoading(true);
-    await connectHashPackViaWC(
-      (accountId) => {
-        setWallet({ address: accountId, chainId: 'hedera:testnet', provider: 'hashpack', hederaAccountId: accountId });
-        setWcLoading(false);
-        router.push('/mlat');
-      },
-      (msg) => {
-        setWcLoading(false);
-        setError(msg);
-      }
-    );
-  }, [router]);
+    setError('Hedera native wallet support (HashPack, Blade, Kabila) coming soon after hackathon. Use MetaMask or Magic Link for demo.');
+  }, []);
 
   // ── Send magic-link ──────────────────────────────────────────────────────────
   const sendMagicLink = useCallback(async () => {
@@ -327,24 +267,28 @@ function OnboardingPage() {
           <div style={S.cardTitle}>Get Started</div>
           <div style={S.cardSub}>Connect your wallet for instant access, or subscribe with email for a full plan.</div>
 
-          {/* ── Hedera Native (HashPack / WalletConnect) ── */}
+          {/* ── Hedera Native (Coming Soon) ── */}
           <div style={{ marginTop:'24px', marginBottom:'8px', fontSize:'10px', color:'#8259EF', letterSpacing:'1.5px', fontWeight:700 }}>
             HEDERA NATIVE
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
             <button
-              onClick={connectHashPack}
-              disabled={wcLoading}
-              style={{ ...S.btn, background:'#8259EF22', border:'1px solid #8259EF66', color:'#E6EAF0', opacity: wcLoading ? 0.7 : 1 }}
+              disabled
+              style={{ 
+                ...S.btn, 
+                background:'#8259EF11', 
+                border:'1px solid #8259EF33', 
+                color:'#8259EF66',
+                cursor:'not-allowed',
+                opacity: 0.6 
+              }}
             >
               <span style={{ fontSize:'20px' }}>🟣</span>
               <div style={{ textAlign:'left' }}>
-                <div style={{ fontWeight:600 }}>HashPack via WalletConnect</div>
-                <div style={{ fontSize:'11px', opacity:0.7 }}>
-                  {wcLoading ? 'Opening WalletConnect modal…' : 'HashPack · Blade · Kabila via WalletConnect'}
-                </div>
+                <div style={{ fontWeight:600 }}>HashPack, Blade, Kabila</div>
+                <div style={{ fontSize:'11px', opacity:0.7 }}>Hedera native wallets coming soon</div>
               </div>
-              <span style={{ marginLeft:'auto', opacity:0.5 }}>{wcLoading ? '⟳' : '→'}</span>
+              <span style={{ marginLeft:'auto', opacity:0.5 }}>🚧</span>
             </button>
           </div>
 
