@@ -157,7 +157,7 @@ function OnboardingPage() {
     }
   }, []);
 
-  // ── Connect wallet then go straight to /mlat (MetaMask path) ────────────────
+  // ── Connect wallet then go to dashboard (MetaMask path) ───────────────────
   const connectWalletAndEnter = useCallback(async () => {
     const provider = getProvider();
     if (!provider) {
@@ -173,7 +173,7 @@ function OnboardingPage() {
       if (!accounts.length) throw new Error('No accounts returned');
       const providerName = eth.isMetaMask ? 'metamask' : eth.isCoinbaseWallet ? 'coinbase' : 'injected';
       setWallet({ address: accounts[0], chainId, provider: providerName });
-      router.push('/mlat');
+      router.push('/dashboard'); // Fixed: go to dashboard, not mlat
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Wallet connection failed';
       setError(msg.includes('rejected') ? 'Connection rejected. Please approve in your wallet.' : msg);
@@ -306,7 +306,7 @@ function OnboardingPage() {
               <span style={{ fontSize:'20px' }}>🦊</span>
               <div style={{ textAlign:'left' }}>
                 <div style={{ fontWeight:600 }}>Connect with MetaMask</div>
-                <div style={{ fontSize:'11px', opacity:0.7 }}>Connects wallet → goes straight to dashboard</div>
+                <div style={{ fontSize:'11px', opacity:0.7 }}>Connects wallet → goes to dashboard</div>
               </div>
               <span style={{ marginLeft:'auto', opacity:0.7 }}>→</span>
             </button>
