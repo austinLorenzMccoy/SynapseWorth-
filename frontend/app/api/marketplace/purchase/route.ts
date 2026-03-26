@@ -1,10 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-)
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,68 +12,35 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Fetch offering ──────────────────────────────────────────────
-    const { data: offering, error: offeringError } = await supabase
-      .from('sensor_offerings')
-      .select('*, sensors(name, operator_account_id)')
-      .eq('id', offering_id)
-      .eq('is_active', true)
-      .single()
-
-    if (offeringError || !offering) {
-      return NextResponse.json(
-        { error: 'Offering not found or no longer active' },
-        { status: 404 }
-      )
+    // ── Mock offering data for hackathon demo ──────────────────────
+    const mockOffering = {
+      id: offering_id,
+      price_amount: Math.random() * 5 + 0.5, // Random price between 0.5-5.5 HBAR
+      pricing_model: 'per_hour',
     }
 
     // ── Calculate total cost ────────────────────────────────────────
-    let totalCost = offering.price_amount
-    if (offering.pricing_model === 'per_message' && quantity) {
-      totalCost = offering.price_amount * quantity
-    } else if (offering.pricing_model === 'bundle' && quantity) {
-      const bundles = Math.ceil(quantity / (offering.bundle_size || 1))
-      totalCost = offering.price_amount * bundles
+    let totalCost = mockOffering.price_amount
+    if (mockOffering.pricing_model === 'per_message' && quantity) {
+      totalCost = mockOffering.price_amount * quantity
+    } else if (mockOffering.pricing_model === 'bundle' && quantity) {
+      totalCost = mockOffering.price_amount * Math.ceil(quantity / 100)
     } else if (duration_hours) {
-      if (offering.pricing_model === 'per_hour') totalCost = offering.price_amount * duration_hours
-      if (offering.pricing_model === 'per_day') totalCost = offering.price_amount * (duration_hours / 24)
-      if (offering.pricing_model === 'per_month') totalCost = offering.price_amount * (duration_hours / 24 / 30)
+      if (mockOffering.pricing_model === 'per_hour') totalCost = mockOffering.price_amount * duration_hours
+      if (mockOffering.pricing_model === 'per_day') totalCost = mockOffering.price_amount * (duration_hours / 24)
+      if (mockOffering.pricing_model === 'per_month') totalCost = mockOffering.price_amount * (duration_hours / 24 / 30)
     }
 
     // ── Generate API key ────────────────────────────────────────────
     const apiKey = `aw_live_${crypto.randomUUID().replace(/-/g, '').slice(0, 32)}`
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
-    // ── Record purchase in Supabase ──────────────────────────────
-    const { data: purchase, error: purchaseError } = await supabase
-      .from('marketplace_purchases')
-      .insert({
-        offering_id,
-        buyer_account_id,
-        quantity: quantity || null,
-        duration_hours: duration_hours || null,
-        api_key: apiKey,
-        expires_at: expiresAt,
-        status: 'pending_payment',
-        total_cost: totalCost,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single()
-
-    if (purchaseError) {
-      return NextResponse.json(
-        { error: 'Failed to record purchase' },
-        { status: 500 }
-      )
-    }
-
     // ── Mock transaction for hackathon demo ──────────────────────
     const mockTransactionId = `0.0.${Math.floor(Math.random() * 999999)}@${Date.now()}`
 
     return NextResponse.json({
       success: true,
-      purchase_id: purchase.id,
+      purchase_id: `purchase_${Date.now()}`,
       transaction_id: mockTransactionId,
       api_key: apiKey,
       expires_at: expiresAt,
