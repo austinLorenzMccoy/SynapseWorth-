@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as crypto from 'crypto'
 
 interface PurchaseRequest {
   offering_id: string
-  sensor_id: string
-  price_amount: number
-  pricing_model: string
+  buyer_account_id: string
+  quantity?: number
   duration_hours?: number
 }
 
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const body: PurchaseRequest = await request.json()
     
     // Validate request
-    if (!body.offering_id || !body.sensor_id || !body.price_amount) {
+    if (!body.offering_id || !body.buyer_account_id) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -22,30 +22,32 @@ export async function POST(request: NextRequest) {
     
     // Generate mock transaction data for hackathon demo
     const mockTransaction = {
-      transaction_id: `0x${Math.random().toString(16).substr(2, 8)}`,
+      transaction_id: `0.0.${Math.floor(Math.random() * 999999)}@${Date.now()}`,
       offering_id: body.offering_id,
-      sensor_id: body.sensor_id,
-      amount: body.price_amount,
-      pricing_model: body.pricing_model,
-      duration_hours: body.duration_hours || 24,
+      buyer_account_id: body.buyer_account_id,
+      amount: Math.random() * 10, // Random HBAR amount
       status: 'pending',
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
       network: 'testnet',
-      // In production, this would be a real Hedera transaction hash
     }
+    
+    // Generate API key for access
+    const apiKey = `aw_${crypto.randomUUID().replace(/-/g, '').slice(0, 32)}`
     
     console.log('Mock purchase transaction:', mockTransaction)
     
     return NextResponse.json({
       success: true,
-      transaction: mockTransaction,
-      message: 'Purchase initiated successfully. Connect your wallet to complete the transaction.',
+      transaction_id: mockTransaction.transaction_id,
+      api_key: apiKey,
+      expires_at: mockTransaction.expires_at,
+      message: 'Purchase recorded! Your API key is ready for use.',
       next_steps: [
-        '1. Connect your Hedera wallet (HashPack, Blade, etc.)',
-        '2. Approve the HBAR transaction',
-        '3. Wait for blockchain confirmation',
-        '4. Access granted to purchased data'
+        '1. API key generated for immediate access',
+        '2. Transaction logged for demo purposes',
+        '3. Use API key to access sensor data',
+        '4. In production: Real HBAR transfer required'
       ]
     })
   } catch (error) {

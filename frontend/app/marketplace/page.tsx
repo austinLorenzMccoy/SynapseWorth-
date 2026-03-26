@@ -1,303 +1,260 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import { MarketSensor, SensorOffering, PurchaseRequest } from '@/types/marketplace'
-import OfferingCard from '@/components/marketplace/OfferingCard'
+import WalletConnectButton from '@/components/marketplace/WalletConnectButton'
 import PurchaseModal from '@/components/marketplace/PurchaseModal'
+import { SensorOffering } from '@/types/marketplace'
+import { useHederaWallet } from '@/components/marketplace/HederaWalletConnector'
 
-// Dynamic import for client-side only components
-const SensorMarketMap = dynamic(() => import('@/components/marketplace/SensorMarketMap'), {
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div></div>
-})
+// AircraftWorth sensor data
+const aircraftSensors = [
+  {
+    id: 'sensor-001',
+    name: 'London Heathrow MLAT',
+    location: '51.4700°N, 0.4543°W',
+    status: 'active',
+    data_types: ['raw_modes', 'mlat_positions'],
+    offerings_count: 4,
+    active_offerings: [
+      {
+        id: 'offering-001',
+        sensor_id: 'sensor-001',
+        data_type: 'raw_modes',
+        pricing_model: 'per_hour',
+        price_amount: 0.25,
+        duration_hours: 24,
+        description: 'Access to live Mode‑S transponder data from Heathrow MLAT network'
+      },
+      {
+        id: 'offering-002', 
+        sensor_id: 'sensor-001',
+        data_type: 'mlat_positions',
+        pricing_model: 'per_day',
+        price_amount: 1.5,
+        duration_hours: 72,
+        description: 'High-precision MLAT positioning data from Heathrow sensor network'
+      },
+      {
+        id: 'offering-003',
+        sensor_id: 'sensor-001', 
+        data_type: 'both',
+        pricing_model: 'bundle',
+        price_amount: 3.0,
+        duration_hours: 168,
+        description: 'Complete access to all data types for one week'
+      },
+      {
+        id: 'offering-004',
+        sensor_id: 'sensor-001',
+        data_type: 'both',
+        pricing_model: 'per_month',
+        price_amount: 8.0,
+        duration_hours: 720,
+        description: 'Unlimited access to Heathrow MLAT sensor network'
+      }
+    ]
+  },
+  {
+    id: 'sensor-002',
+    name: 'New York JFK MLAT',
+    location: '40.6413°N, 73.7781°W',
+    status: 'active',
+    data_types: ['mlat_positions'],
+    offerings_count: 3,
+    active_offerings: [
+      {
+        id: 'offering-005',
+        sensor_id: 'sensor-002',
+        data_type: 'mlat_positions',
+        pricing_model: 'per_hour',
+        price_amount: 0.5,
+        duration_hours: 12,
+        description: 'MLAT positioning data from JFK airport coverage area'
+      },
+      {
+        id: 'offering-006',
+        sensor_id: 'sensor-002',
+        data_type: 'both',
+        pricing_model: 'bundle',
+        price_amount: 5.0,
+        duration_hours: 96,
+        description: 'Extended MLAT access with historical data included'
+      }
+    ]
+  },
+  {
+    id: 'sensor-003',
+    name: 'Los Angeles International MLAT',
+    location: '33.9425°N, 118.4081°W',
+    status: 'active',
+    data_types: ['raw_modes', 'mlat_positions'],
+    offerings_count: 3,
+    active_offerings: [
+      {
+        id: 'offering-007',
+        sensor_id: 'sensor-003',
+        data_type: 'raw_modes',
+        pricing_model: 'per_hour',
+        price_amount: 0.3,
+        duration_hours: 24,
+        description: 'Mode‑S transponder data from LAX airport MLAT network'
+      },
+      {
+        id: 'offering-008',
+        sensor_id: 'sensor-003',
+        data_type: 'mlat_positions',
+        pricing_model: 'per_day',
+        price_amount: 2.0,
+        duration_hours: 48,
+        description: 'High-precision MLAT data from Los Angeles sensor network'
+      },
+      {
+        id: 'offering-009',
+        sensor_id: 'sensor-003',
+        data_type: 'both',
+        pricing_model: 'bundle',
+        price_amount: 4.0,
+        duration_hours: 168,
+        description: 'Complete access to LAX MLAT sensor network'
+      }
+    ]
+  }
+]
+
+// Leaflet must be client-side only
+const SensorMarketMap = dynamic(
+  () => import('@/components/marketplace/SensorMarketMap'),
+  { ssr: false, loading: () => (
+    <div className="flex items-center justify-center h-96 bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto" />
+        <p className="mt-4 text-gray-600">Loading sensor map...</p>
+      </div>
+    </div>
+  )}
+)
 
 export default function MarketplacePage() {
-  const [sensors, setSensors] = useState<MarketSensor[]>([])
+  const { isConnected, accountId, connect } = useHederaWallet()
   const [selectedOffering, setSelectedOffering] = useState<SensorOffering | null>(null)
-  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [view, setView] = useState<'map' | 'list'>('map')
-  const [filters, setFilters] = useState({
-    data_type: '',
-    pricing_model: '',
-    min_price: '',
-    max_price: '',
-  })
-
-  useEffect(() => {
-    fetchSensors()
-  }, [filters])
-
-  const fetchSensors = async () => {
-    try {
-      const params = new URLSearchParams()
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value)
-      })
-
-      const response = await fetch(`/api/marketplace/sensors?${params}`)
-      if (!response.ok) throw new Error('Failed to fetch sensors')
-      
-      const data = await response.json()
-      setSensors(data)
-    } catch (error) {
-      console.error('Error fetching sensors:', error)
-    }
-  }
+  const [purchaseLoading, setPurchaseLoading] = useState(false)
+  const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
 
   const handlePurchase = (offering: SensorOffering) => {
+    if (!isConnected) {
+      connect()
+      return
+    }
     setSelectedOffering(offering)
-    setIsPurchaseModalOpen(true)
+    setPurchaseSuccess(null)
+    setPurchaseError(null)
   }
 
-  const handlePurchaseConfirm = async (request: PurchaseRequest) => {
-    if (!selectedOffering) return
+  const handleConfirmPurchase = async (request: {
+    offering_id: string
+    quantity?: number
+    duration_hours?: number
+  }) => {
+    if (!isConnected || !accountId) {
+      setPurchaseError('Wallet not connected')
+      return
+    }
+
+    setPurchaseLoading(true)
+    setPurchaseError(null)
 
     try {
-      setIsLoading(true)
-
-      // Initiate purchase
-      const response = await fetch('/api/marketplace/purchase', {
+      const res = await fetch('/api/marketplace/purchase', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...request,
+          buyer_account_id: accountId,
+        }),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to initiate purchase')
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Purchase failed')
       }
 
-      const purchaseData = await response.json()
-
-      // TODO: Integrate with Hedera wallet
-      // For now, just show the transaction data
-      console.log('Purchase initiated:', purchaseData)
-
-      // Close modal and reset
-      setIsPurchaseModalOpen(false)
+      const data = await res.json()
+      setPurchaseSuccess(
+        `Purchase confirmed! Transaction ID: ${data.transaction_id}. Your API key: ${data.api_key}` 
+      )
       setSelectedOffering(null)
-
-      // Show success message
-      alert('Purchase initiated! Please connect your wallet to complete the payment.')
-
-    } catch (error) {
-      console.error('Purchase error:', error)
-      alert('Failed to initiate purchase. Please try again.')
+    } catch (err) {
+      setPurchaseError(err instanceof Error ? err.message : 'Purchase failed')
     } finally {
-      setIsLoading(false)
+      setPurchaseLoading(false)
     }
   }
-
-  const getAllOfferings = (): SensorOffering[] => {
-    return sensors.flatMap(sensor => sensor.active_offerings)
-  }
-
-  const filteredOfferings = getAllOfferings().filter(offering => {
-    if (filters.data_type && offering.data_type !== filters.data_type) return false
-    if (filters.pricing_model && offering.pricing_model !== filters.pricing_model) return false
-    if (filters.min_price && offering.price_amount < parseFloat(filters.min_price)) return false
-    if (filters.max_price && offering.price_amount > parseFloat(filters.max_price)) return false
-    return true
-  })
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Data Marketplace</h1>
-                <p className="mt-2 text-gray-600">
-                  Purchase access to live Mode‑S data and MLAT positions from our sensor network
-                </p>
-              </div>
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => setView('map')}
-                  className={`px-4 py-2 rounded font-medium transition-colors ${
-                    view === 'map'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Map View
-                </button>
-                <button
-                  onClick={() => setView('list')}
-                  className={`px-4 py-2 rounded font-medium transition-colors ${
-                    view === 'list'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  List View
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-wrap gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data Type
-              </label>
-              <select
-                value={filters.data_type}
-                onChange={(e) => setFilters(prev => ({ ...prev, data_type: e.target.value }))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">All Types</option>
-                <option value="raw_modes">Raw Mode‑S</option>
-                <option value="mlat_positions">MLAT Positions</option>
-                <option value="both">Both</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pricing Model
-              </label>
-              <select
-                value={filters.pricing_model}
-                onChange={(e) => setFilters(prev => ({ ...prev, pricing_model: e.target.value }))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">All Models</option>
-                <option value="per_message">Per Message</option>
-                <option value="per_hour">Per Hour</option>
-                <option value="per_day">Per Day</option>
-                <option value="per_month">Per Month</option>
-                <option value="bundle">Bundle</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Min Price (HBAR)
-              </label>
-              <input
-                type="number"
-                step="0.000001"
-                placeholder="0.000001"
-                value={filters.min_price}
-                onChange={(e) => setFilters(prev => ({ ...prev, min_price: e.target.value }))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Price (HBAR)
-              </label>
-              <input
-                type="number"
-                step="0.000001"
-                placeholder="1.000000"
-                value={filters.max_price}
-                onChange={(e) => setFilters(prev => ({ ...prev, max_price: e.target.value }))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            
-            <div className="flex items-end">
-              <button
-                onClick={fetchSensors}
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-6 rounded-lg border">
-            <div className="text-2xl font-bold text-indigo-600">{sensors.length}</div>
-            <div className="text-gray-600">Active Sensors</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg border">
-            <div className="text-2xl font-bold text-green-600">
-              {getAllOfferings().length}
-            </div>
-            <div className="text-gray-600">Total Offerings</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg border">
-            <div className="text-2xl font-bold text-purple-600">
-              {filteredOfferings.length}
-            </div>
-            <div className="text-gray-600">Filtered Results</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg border">
-            <div className="text-2xl font-bold text-orange-600">
-              {sensors.filter(s => s.offerings_count > 0).length}
-            </div>
-            <div className="text-gray-600">Sensors with Data</div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        {view === 'map' ? (
-          <div className="bg-white rounded-lg border" style={{ height: '600px' }}>
-            <SensorMarketMap />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredOfferings.map((offering) => {
-              const sensor = sensors.find(s => s.id === offering.sensor_id)
-              if (!sensor) return null
-              
-              return (
-                <OfferingCard
-                  key={offering.id}
-                  offering={offering}
-                  sensorName={sensor.name}
-                  sensorLocation={sensor.location}
-                  onPurchase={handlePurchase}
-                />
-              )
-            })}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {filteredOfferings.length === 0 && view === 'list' && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-xl mb-4">🔍</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No offerings found
-            </h3>
-            <p className="text-gray-600">
-              Try adjusting your filters or check back later for new offerings.
+      <div className="bg-white border-b px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">AircraftWorth Sensor Marketplace</h1>
+            <p className="mt-2 text-gray-600">
+              Purchase live MLAT and Mode‑S data from our global sensor network. Payments via Hedera HBAR.
             </p>
           </div>
-        )}
+          <WalletConnectButton />
+        </div>
+      </div>
+
+      {/* Wallet prompt banner */}
+      {!isConnected && (
+        <div className="bg-indigo-50 border-b border-indigo-200 px-6 py-3">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-sm text-indigo-700">
+              Connect your Hedera wallet (HashPack) to purchase sensor data access.
+            </p>
+            <button
+              onClick={connect}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800 underline"
+            >
+              Connect now →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success/Error banners */}
+      {purchaseSuccess && (
+        <div className="bg-green-50 border-b border-green-200 px-6 py-3">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-sm text-green-700">✅ {purchaseSuccess}</p>
+          </div>
+        </div>
+      )}
+      {purchaseError && (
+        <div className="bg-red-50 border-b border-red-200 px-6 py-3">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-sm text-red-700">❌ {purchaseError}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Map */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" style={{ height: '70vh' }}>
+          <SensorMarketMap onPurchase={handlePurchase} />
+        </div>
       </div>
 
       {/* Purchase Modal */}
       {selectedOffering && (
         <PurchaseModal
           offering={selectedOffering}
-          isOpen={isPurchaseModalOpen}
-          onClose={() => {
-            setIsPurchaseModalOpen(false)
-            setSelectedOffering(null)
-          }}
-          onConfirm={handlePurchaseConfirm}
-          isLoading={isLoading}
+          isOpen={!!selectedOffering}
+          onClose={() => setSelectedOffering(null)}
+          onConfirm={handleConfirmPurchase}
+          isLoading={purchaseLoading}
         />
       )}
     </div>

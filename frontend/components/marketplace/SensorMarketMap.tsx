@@ -1,176 +1,76 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import { supabase } from '@/lib/supabase'
-import L from 'leaflet'
+import { useEffect, useState } from 'react'
+import { MapPin, Activity } from 'lucide-react'
+import { SensorOffering } from '@/types/marketplace'
 
-// Types
-interface SensorOffering {
-  id: string
-  sensor_id: string
-  data_type: 'raw_modes' | 'mlat_positions' | 'both'
-  pricing_model: 'per_message' | 'per_minute' | 'per_hour' | 'per_day' | 'per_month' | 'bundle'
-  price_amount: number
-  token_id: string
-  bundle_size?: number
-  is_active: boolean
-  sensor_name?: string
-  sensor_location?: { coordinates: [number, number] }
+// AircraftWorth sensor locations
+const aircraftSensorLocations = [
+  { id: 'sensor-001', name: 'London Heathrow MLAT', lat: 51.4700, lng: -0.4543, status: 'active' },
+  { id: 'sensor-002', name: 'New York JFK MLAT', lat: 40.6413, lng: -73.7781, status: 'active' },
+  { id: 'sensor-003', name: 'Los Angeles International MLAT', lat: 33.9425, lng: -118.4081, status: 'active' },
+]
+
+interface SensorMarketMapProps {
+  onPurchase: (offering: SensorOffering) => void
 }
 
-interface MarketSensor {
-  id: string
-  name: string
-  location: { coordinates: [number, number] }
-  last_heartbeat?: string
-  offerings_count: number
-  min_price?: number
-  active_offerings: SensorOffering[]
-}
-
-// Custom marker icon for sensors
-const sensorIcon = L.divIcon({
-  className: '',
-  html: `
-    <div style="
-      width: 20px; height: 20px; border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: 3px solid #ffffff;
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-      font-size: 10px;
-    ">S</div>
-  `,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-})
-
-// Component to control map view
-function MapController({ sensors }: { sensors: MarketSensor[] }) {
-  const map = useMap()
+export default function SensorMarketMap({ onPurchase }: SensorMarketMapProps) {
+  const [selectedSensor, setSelectedSensor] = useState<string | null>(null)
 
   useEffect(() => {
-    if (sensors.length > 0) {
-      const bounds = L.latLngBounds(
-        sensors.map(sensor => [
-          sensor.location.coordinates[1],
-          sensor.location.coordinates[0]
-        ])
-      )
-      map.fitBounds(bounds, { padding: [50, 50] })
+    // Initialize map (client-side only)
+    const mapScript = document.createElement('script')
+    mapScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    mapScript.async = true
+    
+    const linkScript = document.createElement('link')
+    linkScript.rel = 'stylesheet'
+    linkScript.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    
+    document.head.appendChild(linkScript)
+    document.head.appendChild(mapScript)
+    
+    mapScript.onload = () => {
+      // @ts-ignore - Leaflet global
+      const L = window.L
+      
+      const map = L.map('sensor-map').setView([51.0, 0.0], 2)
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: ' OpenStreetMap contributors'
+      }).addTo(map)
+      
+      // Add sensor markers
+      aircraftSensorLocations.forEach(sensor => {
+        const color = sensor.status === 'active' ? '#10b981' : '#ef4444'
+        const marker = L.circleMarker([sensor.lat, sensor.lng], {
+          radius: 50000, // 50km coverage radius
+          fillColor: color,
+          color: color,
+          weight: 2,
+          opacity: 0.6
+        }).addTo(map)
+        
+        marker.bindPopup(`
+          <div style="font-family: system-ui, -apple-system, sans-serif;">
+            <h3 style="margin: 0 0 8px 0; color: #1f2937;">${sensor.name}</h3>
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">${sensor.location}</p>
+            <p style="margin: 4px 0 0 0;">
+              <strong>Status:</strong> 
+              <span style="color: ${sensor.status === 'active' ? '#10b981' : '#ef4444'}">
+                ${sensor.status.toUpperCase()}
+              </span>
+            </p>
+          </div>
+        `)
+        
+        marker.on('click', () => {
+          setSelectedSensor(sensor.id)
+        })
+      })
     }
-  }, [sensors, map])
-
-  return null
-}
-
-export default function SensorMarketMap() {
-  const [sensors, setSensors] = useState<MarketSensor[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedSensor, setSelectedSensor] = useState<MarketSensor | null>(null)
-  const [filters, setFilters] = useState({
-    data_type: '',
-    pricing_model: '',
-  })
-
-  useEffect(() => {
-    fetchSensors()
-  }, [filters])
-
-  const fetchSensors = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const params = new URLSearchParams()
-      if (filters.data_type) params.append('data_type', filters.data_type)
-      if (filters.pricing_model) params.append('pricing_model', filters.pricing_model)
-
-      const response = await fetch(`/api/marketplace/sensors?${params}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch sensors')
-      }
-
-      const data = await response.json()
-      setSensors(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const formatPrice = (amount: number, token: string) => {
-    if (token === 'HBAR') {
-      // Convert from tinybars to HBAR
-      const hbar = amount / 100000000
-      return `${hbar.toFixed(6)} HBAR`
-    }
-    return `${amount} ${token}`
-  }
-
-  const formatPricingModel = (model: string) => {
-    const models = {
-      per_message: 'Per Message',
-      per_minute: 'Per Minute',
-      per_hour: 'Per Hour',
-      per_day: 'Per Day',
-      per_month: 'Per Month',
-      bundle: 'Bundle',
-    }
-    return models[model as keyof typeof models] || model
-  }
-
-  const formatDataType = (type: string) => {
-    const types = {
-      raw_modes: 'Raw Mode‑S',
-      mlat_positions: 'MLAT Positions',
-      both: 'Both',
-    }
-    return types[type as keyof typeof types] || type
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading marketplace sensors...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️</div>
-          <p className="text-gray-600">{error}</p>
-          <button
-            onClick={fetchSensors}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (sensors.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="text-gray-400 text-xl mb-4">📍</div>
-          <p className="text-gray-600">No sensors found matching your criteria</p>
-        </div>
+  }, [])
       </div>
     )
   }
@@ -283,24 +183,6 @@ export default function SensorMarketMap() {
                         <div>
                           {formatPricingModel(offering.pricing_model)} -{' '}
                           {formatPrice(offering.price_amount, offering.token_id)}
-                          {offering.bundle_size && (
-                            <span> ({offering.bundle_size} messages)</span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => {
-                            // TODO: Open purchase modal
-                            console.log('Purchase offering:', offering.id)
-                          }}
-                          className="mt-1 px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700"
-                        >
-                          Purchase
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Popup>
             </Marker>
           ))}
         </MapContainer>
