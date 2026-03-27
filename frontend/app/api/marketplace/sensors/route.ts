@@ -12,31 +12,49 @@ export async function GET(req: NextRequest) {
     const dataType = searchParams.get('data_type')
     const pricingModel = searchParams.get('pricing_model')
 
-    // Build offerings query
+    // Build offerings query with proper joins
     let offeringsQuery = supabase
       .from('sensor_offerings')
       .select(`
         id, sensor_id, data_type, pricing_model,
         price_amount, token_id, bundle_size, is_active,
+        description,
         sensors (
-          id, name, location, last_heartbeat, operator_account_id
+          id, name, location, last_heartbeat, 
+          operator_account_id, status
         )
       `)
       .eq('is_active', true)
+      .eq('sensors.status', 'active')
 
-    if (dataType) offeringsQuery = offeringsQuery.eq('data_type', dataType)
-    if (pricingModel) offeringsQuery = offeringsQuery.eq('pricing_model', pricingModel)
+    // Apply filters if provided
+    if (dataType) {
+      offeringsQuery = offeringsQuery.eq('data_type', dataType)
+    }
+    if (pricingModel) {
+      offeringsQuery = offeringsQuery.eq('pricing_model', pricingModel)
+    }
 
-    const { data: offerings, error } = await offeringsQuery
+    const { data: offerings, error: offeringsError } = await offeringsQuery
 
-    if (error) throw error
+    if (offeringsError) {
+      console.error('Supabase query error:', offeringsError)
+      throw new Error(`Database query failed: ${offeringsError.message}`)
+    }
+
+    if (!offerings || offerings.length === 0) {
+      return NextResponse.json([])
+    }
 
     // Group offerings by sensor
     const sensorMap = new Map<string, any>()
 
-    for (const offering of offerings || []) {
+    for (const offering of offerings) {
       const sensor = offering.sensors as any
-      if (!sensor) continue
+      if (!sensor) {
+        console.warn('Offering missing sensor data:', offering.id)
+        continue
+      }
 
       if (!sensorMap.has(sensor.id)) {
         sensorMap.set(sensor.id, {
@@ -57,17 +75,19 @@ export async function GET(req: NextRequest) {
         sensor_id: offering.sensor_id,
         data_type: offering.data_type,
         pricing_model: offering.pricing_model,
-        price_amount: offering.price_amount,
+        price_amount: parseFloat(offering.price_amount),
         token_id: offering.token_id,
         bundle_size: offering.bundle_size,
         is_active: offering.is_active,
+        description: offering.description,
         sensor_name: sensor.name,
         sensor_location: sensor.location,
       })
 
-      // Update min price
-      if (sensorData.min_price === null || offering.price_amount < sensorData.min_price) {
-        sensorData.min_price = offering.price_amount
+      // Update minimum price
+      const price = parseFloat(offering.price_amount)
+      if (sensorData.min_price === null || price < sensorData.min_price) {
+        sensorData.min_price = price
       }
     }
 
@@ -76,11 +96,20 @@ export async function GET(req: NextRequest) {
       a.name.localeCompare(b.name)
     )
 
-    return NextResponse.json(sensors)
+    // Add caching headers
+    return NextResponse.json(sensors, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+      },
+    })
+
   } catch (error) {
     console.error('Sensors API error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch sensors' },
+      { 
+        error: 'Failed to fetch sensors',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
